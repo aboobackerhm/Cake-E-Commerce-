@@ -1,0 +1,6 @@
+env312/
+venv/
+.env
+__pycache__/
+*.pyc
+media/

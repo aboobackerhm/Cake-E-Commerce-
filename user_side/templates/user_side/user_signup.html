@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" /> -->
+
+    <title>Sign Up</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-6 text-center">Sign Up</h2>
+        {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                    <div class="bg-{% if message.tags == 'error' %}red-100 text-red-700{% else %}green-100 text-green-700{% endif %} px-4 py-2 rounded">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <form method="POST">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <input type="text" name="username" id="username" value="{{ form_data.username }}"
+                       class="mt-1 p-2 w-full border rounded-md {% if errors.username %}border-red-500{% endif %}"
+                       required>
+                {% if errors.username %}
+                    <p class="text-red-500 text-sm mt-1">{{ errors.username }}</p>
+                {% endif %}
+            </div>
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" name="email" id="email" value="{{ form_data.email }}"
+                       class="mt-1 p-2 w-full border rounded-md {% if errors.email %}border-red-500{% endif %}"
+                       required>
+                {% if errors.email %}
+                    <p class="text-red-500 text-sm mt-1">{{ errors.email }}</p>
+                {% endif %}
+            </div>
+            <div class="mb-4">
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" name="password" id="password"
+                       class="mt-1 p-2 w-full border rounded-md {% if errors.password %}border-red-500{% endif %}"
+                       required>
+                {% if errors.password %}
+                    <p class="text-red-500 text-sm mt-1">{{ errors.password }}</p>
+                {% endif %}
+            </div>
+            <div class="mb-4">
+                <label for="confirm_password" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                <input type="password" name="confirm_password" id="confirm_password"
+                       class="mt-1 p-2 w-full border rounded-md {% if errors.confirm_password %}border-red-500{% endif %}"
+                       required>
+                {% if errors.confirm_password %}
+                    <p class="text-red-500 text-sm mt-1">{{ errors.confirm_password }}</p>
+                {% endif %}
+            </div>
+            <button type="submit"
+                    class="w-full bg-black text-white p-2 rounded-md hover:bg-black-700">Sign Up</button>
+        </form>
+        <p class="mt-4 text-center">
+            Already have an account? <a href="{% url 'user_login' %}" class="text-black hover:underline">Login</a>
+        </p>
+    </div>
+</body>
+</html>

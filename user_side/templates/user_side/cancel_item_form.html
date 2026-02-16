@@ -1,0 +1,23 @@
+{% extends 'user_side/user_base.html' %}
+{% block content %}
+<div class="max-w-2xl mx-auto py-12">
+  <h1 class="text-2xl font-bold mb-6">Cancel Item</h1>
+  <div class="bg-white p-6 rounded-xl shadow">
+    <p>Are you sure you want to cancel this item?</p>
+    <p class="mt-2"><strong>{{ item.variant.product.name }}</strong> ({{ item.variant.get_size_display }})</p>
+    <form method="post" class="mt-6">
+      {% csrf_token %}
+      <label class="block text-sm font-medium">Reason (optional)</label>
+      <textarea name="reason" class="w-full mt-2 border rounded-lg px-4 py-3" rows="3"></textarea>
+      <div class="mt-6 flex gap-4">
+        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg">
+          Yes, Cancel Item
+        </button>
+        <a href="{% url 'order_detail' order.order_id %}" class="text-gray-600 border px-6 py-3 rounded-lg">
+          No, Keep It
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

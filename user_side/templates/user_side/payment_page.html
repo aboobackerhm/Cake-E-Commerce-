@@ -1,0 +1,259 @@
+{% extends "user_side/user_base.html" %}
+{% block title %}Select Payment Method - MR CAKE{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-10 text-center md:text-left">
+      Select Payment Method
+    </h1>
+
+    <div class="grid md:grid-cols-3 gap-8">
+      <!-- Left: Address + Payment Options -->
+      <div class="md:col-span-2 space-y-8">
+        <!-- Delivery Address -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
+          <h2 class="text-xl font-bold mb-4">Delivery Address</h2>
+          <div class="p-4 bg-gray-50 rounded-lg">
+            <p class="font-semibold">{{ address.full_name }}</p>
+            <p class="text-sm text-gray-600 mt-1">{{ address.phone }}</p>
+            <p class="text-sm text-gray-600 mt-1">
+              {{ address.address_line_1 }}{% if address.address_line_2 %}, {{ address.address_line_2 }}{% endif %}
+            </p>
+            <p class="text-sm text-gray-600">
+              {{ address.city }}, {{ address.state }} — {{ address.pincode }}
+            </p>
+          </div>
+          <a href="{% url 'checkout' %}" class="text-sky-600 hover:underline text-sm mt-3 inline-block">
+            Change or Add Address
+          </a>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
+          <h2 class="text-xl font-bold mb-6">Choose Payment Method</h2>
+
+          <form id="paymentForm" method="post" action="{% url 'place_order_final' %}">
+            {% csrf_token %}
+
+            <!-- Hidden field for final selected method -->
+            <input type="hidden" name="payment_method" id="selectedPayment" value="cod">
+
+            <!-- COD -->
+            <label class="flex items-center p-5 border-2 rounded-xl mb-5 cursor-pointer transition-all
+                          border-orange-500 bg-orange-50/70 hover:bg-orange-50">
+              <input type="radio" name="temp_payment" value="cod" class="mr-4 h-5 w-5 text-orange-600" checked 
+                     onchange="document.getElementById('selectedPayment').value = 'cod';">
+              <div class="flex-1">
+                <p class="font-semibold text-lg">Cash on Delivery (COD)</p>
+                <p class="text-sm text-gray-600 mt-1">Pay when you receive your order</p>
+              </div>
+              <span class="text-green-600 font-bold text-sm">Available</span>
+            </label>
+
+            <!-- Online Payment (Razorpay) -->
+            <label class="flex items-center p-5 border rounded-xl cursor-pointer transition-all hover:bg-gray-50">
+              <input type="radio" name="temp_payment" value="razorpay" class="mr-4 h-5 w-5 text-orange-600"
+                     onchange="document.getElementById('selectedPayment').value = 'razorpay';">
+              <div class="flex-1">
+                <p class="font-semibold text-lg">Pay Online Now</p>
+                <p class="text-sm text-gray-600 mt-1">Secure payment with UPI, Cards, Netbanking, Wallets</p>
+              </div>
+              <span class="text-blue-600 font-medium text-sm">Recommended</span>
+            </label>
+
+            <!-- Final Place Order Button -->
+            <button type="submit" id="payBtn" 
+                    class="w-full mt-10 bg-gradient-to-r from-orange-600 to-orange-700 text-black font-bold py-5 rounded-xl text-xl shadow-lg hover:from-orange-700 hover:to-orange-800 transition-all transform hover:scale-[1.02]">
+              Place Order • ₹{{ grand_total|floatformat:2 }}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Right: Order Summary -->
+      <div class="md:col-span-1">
+        <div class="bg-white rounded-2xl shadow-sm p-6 border border-gray-200 sticky top-8">
+          <h3 class="text-xl font-bold mb-5">Order Summary</h3>
+          
+          <div class="space-y-4 text-sm">
+            <div class="flex justify-between">
+              <span>Subtotal</span>
+              <span>₹{{ subtotal|floatformat:2 }}</span>
+            </div>
+            
+            {% if discount > 0 %}
+            <div class="flex justify-between text-green-600 font-medium">
+              <span>Discount {% if applied_coupon %}({{ applied_coupon.code }}){% endif %}</span>
+              <span>-₹{{ discount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="flex justify-between">
+              <span>Tax (5%)</span>
+              <span>₹{{ tax|floatformat:2 }}</span>
+            </div>
+            
+            <div class="flex justify-between">
+              <span>Shipping</span>
+              <span class="{% if shipping == 0 %}text-green-600 font-medium{% endif %}">
+                {% if shipping == 0 %}Free{% else %}₹{{ shipping|floatformat:2 }}{% endif %}
+              </span>
+            </div>
+
+            <div class="border-t pt-5 mt-5">
+              <div class="flex justify-between text-xl font-bold text-gray-900">
+                <span>Total</span>
+                <span>₹{{ grand_total|floatformat:2 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Razorpay SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("paymentForm");
+  const payBtn = document.getElementById("payBtn");
+
+  form.addEventListener("submit", function (e) {
+    const selectedMethod = document.getElementById("selectedPayment").value;
+
+    if (!selectedMethod) {
+      alert("Please select a payment method");
+      e.preventDefault();
+      return;
+    }
+
+    if (selectedMethod === "cod") {
+      // Normal form submit for COD
+      return; // Let form submit normally to /place-order-final/
+    }
+
+    // ────────────────────────────────────────────────
+    // Razorpay flow
+    // ────────────────────────────────────────────────
+    e.preventDefault();
+    payBtn.disabled = true;
+    payBtn.innerHTML = '<span class="animate-pulse">Processing...</span>';
+
+    // Prepare cart items from the order summary context
+    const cartItems = [
+      {% for item in cart_items %}
+      {
+        "variant_id": {{ item.variant.id }},
+        "quantity": {{ item.quantity }},
+        "price": {{ item.discounted_unit_price|floatformat:"2"|default:item.original_unit_price|floatformat:"2" }},
+        "name": "{{ item.variant.product.name|escapejs }}",
+        "size": "{{ item.variant.get_size_display|escapejs|default:'' }}"
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    // Debug: check what we're sending (open browser console F12)
+    console.log("Sending cart_items to backend:", cartItems);
+
+    const orderData = {
+      amount: {{ total|floatformat:"2" }},
+      discount: {{ discount|floatformat:"2"|default:"0" }},
+      tax: {{ tax|floatformat:"2"|default:"0" }},
+      shipping: {{ shipping|floatformat:"2"|default:"0" }},
+      address_id: "{{ address.id }}",
+      cart_items: cartItems   // ← This was the missing piece!
+    };
+
+    fetch("/create-razorpay-order/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}"
+      },
+      body: JSON.stringify(orderData)
+    })
+      .then(response => {
+        console.log("Order creation status:", response.status);
+        if (!response.ok) {
+          throw new Error(`Server responded with ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log("Razorpay order created:", data);
+
+        if (!data.status || !data.order_id) {
+          throw new Error(data.error || "Failed to create order");
+        }
+
+        const options = {
+          key: "{{ RAZORPAY_KEY_ID }}",
+          amount: data.amount,
+          currency: data.currency || "INR",
+          name: "MR CAKE",
+          description: "Cake Order Payment",
+          order_id: data.order_id,
+          handler: function (response) {
+            // Payment successful → verify signature
+            fetch("/verify-razorpay-payment/", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+              },
+              body: JSON.stringify({
+                razorpay_order_id: data.order_id,           // use the created order id
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            })
+              .then(r => r.json())
+              .then(result => {
+                if (result.success) {
+                  window.location.href = `/order/success/${result.order_id || 'new'}/`;
+                } else {
+                  alert("Payment verification failed: " + (result.message || "Unknown error"));
+                  payBtn.disabled = false;
+                  payBtn.innerHTML = `Place Order • ₹{{ total|floatformat:2 }}`;
+                }
+              })
+              .catch(err => {
+                console.error("Verification error:", err);
+                alert("Something went wrong during verification.");
+                payBtn.disabled = false;
+                payBtn.innerHTML = `Place Order • ₹{{ total|floatformat:2 }}`;
+              });
+          },
+          prefill: {
+            name: "{{ request.user.get_full_name|default:request.user.username|escapejs }}",
+            email: "{{ request.user.email|escapejs }}",
+            contact: "{{ address.phone|default:''|escapejs }}"
+          },
+          theme: {
+            color: "#f97316"
+          },
+          modal: {
+            ondismiss: function () {
+              payBtn.disabled = false;
+              payBtn.innerHTML = `Place Order • ₹{{ total|floatformat:2 }}`;
+            }
+          }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+      })
+      .catch(err => {
+        console.error("Payment initiation failed:", err);
+        alert("Failed to start payment: " + (err.message || "Unknown error"));
+        payBtn.disabled = false;
+        payBtn.innerHTML = `Place Order • ₹{{ total|floatformat:2 }}`;
+      });
+  });
+});
+</script>
+{% endblock %}

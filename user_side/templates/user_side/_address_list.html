@@ -1,0 +1,36 @@
+<!-- templates/user_side/_address_list.html -->
+{% for addr in addresses %}
+<label class="flex items-start p-4 border rounded-lg cursor-pointer hover:bg-gray-50 {% if addr.is_default %}border-sky-600 bg-sky-50{% endif %}">
+  <input type="radio" name="address" value="{{ addr.id }}" class="mt-1" {% if addr.is_default %}checked{% endif %} required>
+  <div class="ml-3 flex-1">
+    <p class="font-semibold">{{ addr.full_name }}
+      {% if addr.is_default %}
+        <span class="text-xs text-sky-600 font-medium">(Default)</span>
+      {% else %}
+        <span class="text-xs text-gray-500">(Other)</span>
+      {% endif %}
+    </p>
+    <p class="text-sm text-gray-600">{{ addr.phone }}</p>
+    <p class="text-sm text-gray-600">{{ addr.address_line_1 }}{% if addr.address_line_2 %}, {{ addr.address_line_2 }}{% endif %}</p>
+    <p class="text-sm text-gray-600">{{ addr.city }}, {{ addr.state }} - {{ addr.pincode }}</p>
+  </div>
+  <button type="button"
+          onclick='openAddressModal({
+            "id": {{ addr.id }},
+            "full_name": "{{ addr.full_name|escapejs }}",
+            "phone": "{{ addr.phone|escapejs }}",
+            "address_line_1": "{{ addr.address_line_1|escapejs }}",
+            "address_line_2": "{{ addr.address_line_2|escapejs }}",
+            "city": "{{ addr.city|escapejs }}",
+            "state": "{{ addr.state|escapejs }}",
+            "pincode": "{{ addr.pincode|escapejs }}",
+            "is_default": {{ addr.is_default|yesno:"true,false" }},
+            "profile_image": "{% if profile_image %}{{ profile_image }}{% endif %}"
+          })'
+          class="ml-2 text-sky-600 hover:underline text-sm font-medium">
+    Edit
+  </button>
+</label>
+{% empty %}
+<p class="text-gray-600">No addresses found.</p>
+{% endfor %}

@@ -1,0 +1,212 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Add New Product</h2>
+
+    <!-- Debug Output (Uncomment for debugging) -->
+    <!--
+    <pre>
+        Categories: {{ categories|length }}
+        Form Data: {{ form_data }}
+        Images Count: {{ images_count }}
+    </pre>
+    -->
+
+    <!-- Display error or success messages -->
+    {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if not categories %}
+        <div class="alert alert-warning text-center">
+            No active categories available. Please <a href="{% url 'category_management' %}">add a category</a> first.
+        </div>
+    {% else %}
+        <form method="POST" enctype="multipart/form-data" class="bg-light p-4 rounded shadow" id="addProductForm">
+            {% csrf_token %}
+            <!-- Product Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Product Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" value="{{ form_data.name|default:'' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required>{{ form_data.description|default:'' }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                        <select class="form-select" id="category" name="category" required>
+                            <option value="">Select a category</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if form_data.category|stringformat:'i' == category.id|stringformat:'i' %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Size Variants -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Size Variants (Price and Stock)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Enter price and stock for each size. Leave blank if the size is not available. At least one size is required.</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6>500g</h6>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Price (₹)</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="price_500g" value="{{ form_data.price_500g|default:'' }}" placeholder="e.g., 29.99">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">Stock</span>
+                                <input type="number" min="0" class="form-control" name="stock_500g" value="{{ form_data.stock_500g|default:'' }}" placeholder="e.g., 100">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>750g</h6>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Price (₹)</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="price_750g" value="{{ form_data.price_750g|default:'' }}" placeholder="e.g., 29.99">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">Stock</span>
+                                <input type="number" min="0" class="form-control" name="stock_750g" value="{{ form_data.stock_750g|default:'' }}" placeholder="e.g., 100">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>1kg</h6>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Price (₹)</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="price_1kg" value="{{ form_data.price_1kg|default:'' }}" placeholder="e.g., 29.99">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">Stock</span>
+                                <input type="number" min="0" class="form-control" name="stock_1kg" value="{{ form_data.stock_1kg|default:'' }}" placeholder="e.g., 100">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>2kg</h6>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Price (₹)</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="price_2kg" value="{{ form_data.price_2kg|default:'' }}" placeholder="e.g., 29.99">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">Stock</span>
+                                <input type="number" min="0" class="form-control" name="stock_2kg" value="{{ form_data.stock_2kg|default:'' }}" placeholder="e.g., 100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Upload -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Product Images (Minimum 3) <span class="text-danger">*</span></h5>
+                </div>
+                <div class="card-body">
+                    <input type="file" class="form-control" name="images" id="images" multiple accept="image/*">
+                    <small class="form-text text-muted">Upload at least 3 images. Current count: <span id="imageCount">{{ images_count|default:0 }}</span></small>
+                    <div id="imagePreview" class="mt-3 d-flex flex-wrap">
+                        {% if images_count == 0 %}
+                            <img src="{% static 'images/placeholder.jpg' %}" style="max-width: 100px; margin: 5px; border: 1px solid #ddd; border-radius: 5px;" alt="Placeholder">
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="text-center">
+                <button type="submit" class="btn btn-success btn-lg" id="submitButton" disabled>Add Product</button>
+                <a href="{% url 'product_management' %}" class="btn btn-secondary btn-lg">Cancel</a>
+            </div>
+        </form>
+    {% endif %}
+
+    <!-- JavaScript for Image Preview and Validation -->
+    <script>
+        const imageInput = document.getElementById('images');
+        const submitButton = document.getElementById('submitButton');
+        const preview = document.getElementById('imagePreview');
+        const imageCount = document.getElementById('imageCount');
+
+        imageInput.addEventListener('change', function(e) {
+            preview.innerHTML = ''; // Clear previous previews
+            const files = e.target.files;
+            imageCount.textContent = files.length;
+
+            if (files.length === 0) {
+                const img = document.createElement('img');
+                img.src = '{% static "images/placeholder.jpg" %}';
+                img.style.maxWidth = '100px';
+                img.style.margin = '5px';
+                img.style.border = '1px solid #ddd';
+                img.style.borderRadius = '5px';
+                preview.appendChild(img);
+            } else {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.type.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(file);
+                        img.style.maxWidth = '100px';
+                        img.style.margin = '5px';
+                        img.style.border = '1px solid #ddd';
+                        img.style.borderRadius = '5px';
+                        preview.appendChild(img);
+                    }
+                }
+            }
+
+            // Enable submit button only if 3 or more images
+            submitButton.disabled = files.length < 3;
+            if (files.length < 3 && files.length > 0) {
+                alert('Please upload at least 3 images.');
+            }
+        });
+
+        // Validate form on submit
+        document.getElementById('addProductForm').addEventListener('submit', function(e) {
+            const files = imageInput.files;
+            if (files.length < 3) {
+                e.preventDefault();
+                alert('Error: At least 3 images are required.');
+            }
+        });
+    </script>
+
+    <style>
+        .alert-container {
+            max-width: 600px;
+            margin: 0 auto 20px;
+        }
+        .card-header {
+            font-weight: bold;
+        }
+        .form-control, .form-select {
+            border-radius: 5px;
+        }
+        .btn-lg {
+            padding: 10px 30px;
+        }
+    </style>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'user_side/user_base.html' %}
+{% load static %}
+
+{% block title %}Return Item - {{ item.variant.product.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-10">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <!-- Header -->
+      <div class="bg-orange-600 px-8 py-6 text-white">
+        <h1 class="text-2xl font-bold">Return Item Request</h1>
+        <p class="mt-2 opacity-90">Order #{{ order.order_id }}</p>
+      </div>
+
+      <!-- Product Info -->
+      <div class="p-8 border-b">
+        <div class="flex items-center gap-6">
+          <img 
+            src="{{ item.variant.product.get_first_image|default:'https://via.placeholder.com/100' }}" 
+            alt="{{ item.variant.product.name }}"
+            class="w-24 h-24 object-cover rounded-lg border"
+          >
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900">
+              {{ item.variant.product.name }}
+            </h2>
+            <p class="text-gray-600 mt-1">Size: {{ item.variant.get_size_display }}</p>
+            <p class="text-gray-600">Qty: {{ item.quantity }} × ₹{{ item.price }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form method="post" class="p-8">
+        {% csrf_token %}
+
+        <div class="mb-6">
+          <label for="reason" class="block text-lg font-medium text-gray-900 mb-2">
+            Reason for Return <span class="text-red-600">*</span>
+          </label>
+          <textarea 
+            name="reason" 
+            id="reason" 
+            rows="5"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+            placeholder="Please tell us why you're returning this item..."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Warning -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+          <p class="text-sm text-yellow-700">
+            <strong>Note:</strong> Returns are subject to our policy. Product should be in original condition.
+          </p>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4">
+          <button type="submit"
+                  class="flex-1 bg-red-500 hover:bg-red-900 text-white font-medium py-3 px-6 rounded-lg transition duration-200">
+            Submit Return Request
+          </button>
+          
+          <a href="{% url 'order_detail' order.order_id %}"
+             class="flex-1 text-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-3 px-6 rounded-lg transition duration-200">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

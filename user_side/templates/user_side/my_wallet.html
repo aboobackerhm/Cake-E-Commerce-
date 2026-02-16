@@ -1,0 +1,185 @@
+{% extends "user_side/user_profilebase.html" %}
+{% load static %}
+
+{% block title %}My Wallet - {{ request.user.username }}{% endblock %}
+
+{% block profile_section_content  %}
+
+<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto">
+
+        <!-- Page Header -->
+        <div class="mb-10">
+            <h1 class="text-3xl font-bold text-gray-900 sm:text-4xl">
+                My Wallet
+            </h1>
+            <p class="mt-3 text-lg text-gray-600">
+                View your balance, recent activity, and full transaction history
+            </p>
+        </div>
+
+        <!-- Balance Card -->
+        <div class="relative rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-700 shadow-2xl text-black mb-10">
+            <div class="absolute inset-0 bg-black/10"></div>
+            <div class="relative px-8 py-12 sm:px-12 sm:py-16">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-8">
+                    <div>
+                        <p class="text-xl font-medium opacity-90">Available Balance</p>
+                        <p class="mt-3 text-6xl sm:text-7xl font-bold tracking-tight">
+                            ₹{{ wallet.balance|floatformat:2 }}
+                        </p>
+                        <p class="mt-4 text-sm opacity-80">
+                            {% if wallet.updated_at %}
+                                Last updated • {{ wallet.updated_at|date:"d MMM Y — H:i" }}
+                            {% else %}
+                                Wallet created recently
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="#history"
+                           class="inline-flex items-center justify-center px-8 py-4 bg-black backdrop-blur-md rounded-xl text-white font-semibold hover:bg-white/25 transition border border-white/30">
+                            View Full History
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+            <div class="bg-white rounded-xl shadow border border-gray-200 p-6">
+                <p class="text-sm font-medium text-gray-500">Total Credited</p>
+                <p class="mt-3 text-3xl font-bold text-emerald-600">
+                    ₹{{ total_credited|floatformat:2 }}
+                </p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow border border-gray-200 p-6">
+                <p class="text-sm font-medium text-gray-500">Total Debited</p>
+                <p class="mt-3 text-3xl font-bold text-rose-600">
+                    ₹{{ total_debited|floatformat:2 }}
+                </p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow border border-gray-200 p-6">
+                <p class="text-sm font-medium text-gray-500">Total Transactions</p>
+                <p class="mt-3 text-3xl font-bold text-gray-800">
+                    {{ transactions|length }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Recent Activity + Full History -->
+        <div class="bg-white rounded-2xl shadow border border-gray-200 overflow-hidden">
+
+            <!-- Tabs / Section Header -->
+            <div class="border-b border-gray-200 px-6 py-5 flex items-center justify-between bg-gray-50">
+                <h2 class="text-2xl font-semibold text-gray-900">
+                    Transaction History
+                </h2>
+                <div class="text-sm text-gray-500">
+                    Showing {{ transactions|length }} transactions
+                </div>
+            </div>
+
+            <!-- Table -->
+            {% if transactions %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Date</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Type</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Description</th>
+                            <th class="px-6 py-4 text-left text-sm font-semibold text-gray-600">Order</th>
+                            <th class="px-6 py-4 text-right text-sm font-semibold text-gray-600">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        {% for tx in transactions %}
+                        <tr class="hover:bg-indigo-50/30 transition-colors duration-150">
+                            <td class="whitespace-nowrap px-6 py-5 text-sm text-gray-700">
+                                {{ tx.created_at|date:"d MMM Y • h:i A" }}
+                            </td>
+                            <td class="px-6 py-5">
+                                {% if tx.amount >= 0 %}
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Credit
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
+                                        Debit
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-5 text-sm text-gray-700 max-w-md truncate">
+                                {{ tx.description|default:"—" }}
+                            </td>
+                            <td class="px-6 py-5 text-sm">
+                                {% if tx.order %}
+                                    <a href="#" class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                        #{{ tx.order.order_id|default:tx.order.id }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-gray-400">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-5 text-right text-sm font-semibold
+                                {% if tx.amount >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                                {% if tx.amount >= 0 %}+{% endif %}{{ tx.amount|floatformat:2 }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty state -->
+            {% else %}
+            <div class="py-16 text-center">
+                <div class="mx-auto w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-6">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <h3 class="text-xl font-medium text-gray-900 mb-2">No transactions yet</h3>
+                <p class="text-gray-600">Your wallet activity will appear here once you add money or receive refunds.</p>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Help / Info Box
+        <div class="mt-12 bg-blue-50 border border-blue-200 rounded-2xl p-8">
+            <div class="flex items-start gap-5">
+                <div class="flex-shrink-0 mt-1">
+                    <svg class="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-blue-900 mb-3">How to use your wallet</h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-600 font-bold text-xl">•</span>
+                            <span>Cancellations are refunded to wallet <strong>immediately</strong></span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-600 font-bold text-xl">•</span>
+                            <span>Returns are refunded only after <strong>admin approval</strong></span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-emerald-600 font-bold text-xl">•</span>
+                            <span>Use wallet balance during checkout when you have sufficient funds</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div> -->
+
+    </div>
+</div>
+
+{% endblock %}

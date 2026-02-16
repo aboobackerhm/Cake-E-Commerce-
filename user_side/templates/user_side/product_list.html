@@ -1,0 +1,287 @@
+{% extends 'user_side/user_base.html' %}
+
+{% block title %}Product List{% endblock %}
+
+{% block content %}
+    <main id="main" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <!-- Breadcrumb -->
+      <nav class="py-4 text-sm text-gray-600" aria-label="Breadcrumb">
+        <ol class="flex flex-wrap items-center gap-2">
+          <li><a href="/" class="hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 rounded">Home</a></li>
+          <li aria-hidden="true">/</li>
+          <li aria-current="page" class="text-slate-900 font-medium">Products</li>
+        </ol>
+      </nav>
+
+      <!-- Search + Title + Sort -->
+      <section class="flex flex-col gap-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+        <h1 class="text-pretty text-xl font-semibold tracking-tight">Products</h1>
+        <div class="flex items-center gap-3">
+          <!-- Sort Form -->
+          <form method="GET" action="{% url 'product_list' %}" class="flex items-center gap-3">
+            <label for="sort" class="text-sm text-gray-600">Sort by</label>
+            <select id="sort" name="sort" class="rounded-md border border-gray-300 bg-white py-2 pl-3 pr-8 text-sm focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-600/20" onchange="this.form.submit()">
+              <option value="" {% if not sort %}selected{% endif %}>Default</option>
+              <option value="price_low_high" {% if sort == 'price_low_high' %}selected{% endif %}>Price: Low to High</option>
+              <option value="price_high_low" {% if sort == 'price_high_low' %}selected{% endif %}>Price: High to Low</option>
+              <option value="popularity" {% if sort == 'popularity' %}selected{% endif %}>Popularity</option>
+            </select>
+            <!-- Preserve other query parameters -->
+            {% for cat in selected_categories %}
+              <input type="hidden" name="category" value="{{ cat }}">
+            {% endfor %}
+            {% if min_price %}
+              <input type="hidden" name="min_price" value="{{ min_price }}">
+            {% endif %}
+            {% if max_price %}
+              <input type="hidden" name="max_price" value="{{ max_price }}">
+            {% endif %}
+            {% if search_query %}
+              <input type="hidden" name="search" value="{{ search_query }}">
+            {% endif %}
+          </form>
+        </div>
+      </section>
+
+      <!-- Layout -->
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <!-- Sidebar: Filters (desktop) -->
+        <aside class="hidden lg:col-span-3 lg:block" aria-label="Filters">
+          <div class="rounded-lg border border-gray-200">
+            <form method="GET" action="{% url 'product_list' %}" id="desktop-filter-form" class="divide-y divide-gray-200">
+              <!-- Categories -->
+              <fieldset class="p-4">
+                <legend class="mb-3 text-sm font-medium">Categories</legend>
+                <div class="space-y-2">
+                  {% for category in categories %}
+                    <label class="flex items-center gap-2 text-sm">
+                      <input type="checkbox" name="category" value="{{ category.id }}"
+                             class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-600"
+                             {% if category.id|stringformat:"s" in selected_categories %}checked{% endif %}
+                             onchange="document.getElementById('desktop-filter-form').submit()" />
+                      {{ category.name }}
+                    </label>
+                  {% endfor %}
+                </div>
+              </fieldset>
+
+              <!-- Price Range -->
+              <fieldset class="p-4">
+                <legend class="mb-3 text-sm font-medium">Price range</legend>
+                <div class="flex items-center gap-2">
+                  <input name="min_price" type="number" placeholder="Min"
+                         value="{% if min_price %}{{ min_price }}{% endif %}"
+                         class="w-1/2 rounded-md border border-gray-300 p-2 text-sm focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-600/20" />
+                  <span class="text-gray-500">—</span>
+                  <input name="max_price" type="number" placeholder="Max"
+                         value="{% if max_price %}{{ max_price }}{% endif %}"
+                         class="w-1/2 rounded-md border border-gray-300 p-2 text-sm focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-600/20" />
+                </div>
+              </fieldset>
+
+              <!-- Preserve sort and search -->
+              {% if sort %}
+                <input type="hidden" name="sort" value="{{ sort }}">
+              {% endif %}
+              {% if search_query %}
+                <input type="hidden" name="search" value="{{ search_query }}">
+              {% endif %}
+
+              <div class="flex items-center justify-between p-4">
+                <a href="{% url 'product_list' %}?clear=1" class="text-sm text-gray-600 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 rounded">Clear all</a>
+                <button type="submit" class="rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600">Apply</button>
+              </div>
+            </form>
+          </div>
+        </aside>
+
+        <!-- Mobile Filters Drawer -->
+        <div id="mobile-filters" class="lg:hidden fixed inset-0 z-30 hidden" role="dialog" aria-modal="true" aria-labelledby="mobile-filters-title">
+          <div class="absolute inset-0 bg-black/40" data-mobile-filters-close aria-label="Close filters backdrop"></div>
+          <div class="absolute right-0 top-0 h-full w-80 max-w-[85%] bg-white shadow-xl">
+            <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+              <h2 id="mobile-filters-title" class="text-sm font-semibold">Filters</h2>
+              <button type="button" class="rounded-md p-2 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600" data-mobile-filters-close aria-label="Close filters">✕</button>
+            </div>
+            <div class="overflow-y-auto p-4">
+              <form method="GET" action="{% url 'product_list' %}" id="mobile-filter-form" class="space-y-6">
+                <fieldset>
+                  <legend class="mb-2 text-sm font-medium">Categories</legend>
+                  <div class="space-y-2 text-sm">
+                    {% for category in categories %}
+                      <label class="flex items-center gap-2">
+                        <input type="checkbox" name="category" value="{{ category.id }}"
+                               class="h-4 w-4 rounded border-gray-300 text-sky-600 focus:ring-sky-600"
+                               {% if category.id|stringformat:"s" in selected_categories %}checked{% endif %}
+                               onchange="document.getElementById('mobile-filter-form').submit()" />
+                        {{ category.name }}
+                      </label>
+                    {% endfor %}
+                  </div>
+                </fieldset>
+                <fieldset>
+                  <legend class="mb-2 text-sm font-medium">Price</legend>
+                  <div class="flex items-center gap-2">
+                    <input name="min_price" type="number" placeholder="Min"
+                           value="{% if min_price %}{{ min_price }}{% endif %}"
+                           class="w-1/2 rounded-md border border-gray-300 p-2 text-sm focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-600/20" />
+                    <span class="text-gray-500">—</span>
+                    <input name="max_price" type="number" placeholder="Max"
+                           value="{% if max_price %}{{ max_price }}{% endif %}"
+                           class="w-1/2 rounded-md border border-gray-300 p-2 text-sm focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-600/20" />
+                  </div>
+                </fieldset>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products -->
+        <section class="lg:col-span-9">
+          <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {% for product in page_obj %}
+              <li class="group relative rounded-lg border border-gray-200 bg-white overflow-hidden">
+                <!-- Wishlist Heart Button (Top Right) -->
+                {% if request.user.is_authenticated %}
+                <div class="absolute top-3 right-3 z-2" id="wishlist-{{ product.id }}">
+                  <form method="post" action="{% url 'toggle_wishlist' product.id %}" class="inline">
+                    {% csrf_token %}
+                    <button type="button" 
+                            onclick="toggleWishlist(this, {{ product.id }})"
+                            class="flex h-10 w-10 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm transition hover:scale-110 focus:outline-none shadow-md hover:shadow-lg">
+                      
+                      {% if product.id in wishlisted_product_ids %}
+                        <i class="fa-solid fa-heart text-red-500 text-xl drop-shadow-sm"></i>
+                      {% else %}
+                        <i class="fa-regular fa-heart text-gray-500 hover:text-red-500 text-xl transition-colors"></i>
+                      {% endif %}
+                    </button>
+                  </form>
+                </div>
+                {% endif %}
+
+                <!-- Offer Badge (if has offer) -->
+                {% if product.has_offer %}
+                  <div class="absolute top-3 left-3 z-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md ">
+                    -{{ product.savings_perc|floatformat:0 }}%
+                  </div>
+                {% endif %}
+
+                <!-- Product Image -->
+                <a href="{% url 'product_details' product.slug %}" class="block overflow-hidden">
+                  {% with first_image=product.images.first %}
+                    <img src="{% if first_image %}{{ first_image.image.url }}{% else %}https://via.placeholder.com/300{% endif %}" 
+                         class="h-48 w-full object-cover transition group-hover:scale-105" alt="{{ product.name }}" />
+                  {% endwith %}
+                </a>
+
+                <!-- Product Info -->
+                <div class="p-3">
+                  <h3 class="truncate text-sm font-medium text-gray-900">{{ product.name }}</h3>
+
+                  <!-- Price with Offer -->
+                  <div class="mt-1 flex items-center gap-2">
+                    {% if product.has_offer %}
+                      <span class="text-lg font-bold text-red-600">
+                        ₹{{ product.discounted_min_price|floatformat:2 }}
+                      </span>
+                      <span class="text-sm text-gray-500 line-through">
+                        ₹{{ product.get_min_price|floatformat:2 }}
+                      </span>
+                    {% else %}
+                      <span class="text-lg font-bold text-gray-900">
+                        ₹{{ product.get_min_price|floatformat:2 }}
+                      </span>
+                    {% endif %}
+                  </div>
+                </div>
+              </li>
+            {% empty %}
+              <li class="col-span-full text-center py-12 text-gray-600 text-lg">
+                No products found.
+              </li>
+            {% endfor %}
+          </ul>
+
+          <!-- Pagination -->
+          <nav aria-label="Pagination" class="mt-6 flex items-center justify-center gap-1">
+            {% if page_obj.has_previous %}
+              <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% for cat in selected_categories %}&category={{ cat }}{% endfor %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}"
+                 class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
+                 aria-label="Previous page">Prev</a>
+            {% endif %}
+            {% for i in page_obj.paginator.page_range %}
+              {% if page_obj.number == i %}
+                <a href="#"
+                   class="rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
+                   aria-current="page">{{ i }}</a>
+              {% else %}
+                <a href="?page={{ i }}{% if search_query %}&search={{ search_query }}{% endif %}{% for cat in selected_categories %}&category={{ cat }}{% endfor %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}"
+                   class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600">{{ i }}</a>
+              {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% for cat in selected_categories %}&category={{ cat }}{% endfor %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}"
+                 class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
+                 aria-label="Next page">Next</a>
+            {% endif %}
+          </nav>
+        </section>
+      </div>
+
+      <!-- Newsletter -->
+      <!-- <section class="my-12 rounded-lg border border-gray-200 p-6">
+        <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h2 class="text-pretty text-lg font-semibold">Stay up to date</h2>
+            <p class="text-sm text-gray-600">Get the latest offers and products</p>
+          </div>
+          <form class="flex w-full max-w-md gap-2">
+            <label for="email" class="sr-only">Email address</label>
+            <input id="email" type="email" placeholder="you@example.com"
+                   class="w-full flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-600/20" />
+            <button class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600" type="submit">Subscribe</button>
+          </form>
+        </div>
+      </section> -->
+    </main>
+
+    <!-- JavaScript for Instant Wishlist Toggle (no reload) -->
+    <script>
+      function toggleWishlist(button, productId) {
+        const form = button.closest('form');
+        const icon = button.querySelector('i');
+
+        fetch(form.action, {
+          method: 'POST',
+          body: new FormData(form),
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'added') {
+            icon.classList.remove('fa-regular');
+            icon.classList.add('fa-solid');
+            icon.classList.remove('text-gray-500', 'hover:text-red-500');
+            icon.classList.add('text-red-500');
+          } else if (data.status === 'removed') {
+            icon.classList.remove('fa-solid');
+            icon.classList.add('fa-regular');
+            icon.classList.remove('text-red-500');
+            icon.classList.add('text-gray-500', 'hover:text-red-500');
+          }
+        })
+        .catch(error => {
+          console.error('Error toggling wishlist:', error);
+        });
+      }
+    </script>
+
+    <!-- Mobile filters toggle script (add your existing one here if needed) -->
+    <script>
+      // Your mobile filter open/close logic...
+    </script>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | MR CAKES</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #fff1eb 0%, #fce7e1 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .navbar-brand {
+            font-weight: 800;
+            color: #d4380d !important;
+            font-size: 1.8rem;
+        }
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(212, 56, 13, 0.15);
+            overflow: hidden;
+        }
+        .btn-google {
+            background: white;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            padding: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-google:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #ddd;
+        }
+        .btn-login {
+            background: linear-gradient(45deg, #d4380d, #ff6b35);
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        .btn-login:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(212, 56, 13, 0.4);
+        }
+        .alert-dismissible .btn-close {
+            padding: 0.75rem 1rem;
+        }
+        .error-text { color: #e63946; font-size: 0.92rem; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" href="/">MR CAKES</a>
+    </div>
+</nav>
+
+<!-- Breadcrumb -->
+<div class="container mt-3">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Login</li>
+        </ol>
+    </nav>
+</div>
+
+<!-- Login Form -->
+<div class="container my-1">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+
+            <div class="card p-5 animate__animated animate__fadeInUp">
+
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold text-dark">Welcome Back!</h3>
+                    <p class="text-muted">Login to continue to your account</p>
+                </div>
+
+                <!-- Success / Error Messages from Django messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show animate__animated animate__fadeInDown" role="alert">
+                            <i class="fas {% if message.tags == 'error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} me-2"></i>
+                            <strong>{{ message }}</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Form Field Errors (your custom errors dict) -->
+                {% if errors %}
+                    {% if errors.non_field_errors %}
+                        <div class="alert alert-danger alert-dismissible fade show animate__animated animate__shakeX" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>{{ errors.non_field_errors }}</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                <!-- Google Login -->
+                <a href="{% url 'social:begin' 'google-oauth2' %}" class="btn btn-google w-100 mb-4 d-flex align-items-center justify-content-center gap-3 shadow-sm">
+                    <img src="https://img.icons8.com/fluency/32/000000/google-logo.png" width="24" alt="Google">
+                    Continue with Google
+                </a>
+
+                <div class="text-center text-muted mb-4 position-relative">
+                    <hr class="border-top">
+                    <span class="bg-white px-3 position-absolute top-50 start-50 translate-middle">or</span>
+                </div>
+
+                <!-- Login Form -->
+                <form method="POST" action="{% url 'user_login' %}">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Email Address</label>
+                        <input type="email" name="username" class="form-control form-control-lg" placeholder="you@example.com" required>
+                        {% if errors.username %}
+                            <div class="error-text animate__animated animate__fadeIn">
+                                <i class="fas fa-times-circle me-1"></i>{{ errors.username }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Password</label>
+                        <input type="password" name="password" class="form-control form-control-lg" placeholder="Enter password" required>
+                        {% if errors.password %}
+                            <div class="error-text animate__animated animate__fadeIn">
+                                <i class="fas fa-times-circle me-1"></i>{{ errors.password }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-end mb-4">
+                        <a href="{% url 'forgot_password' %}" class="text-decoration-none small fw-600 text-danger">
+                            Forgot Password?
+                        </a>
+                    </div>
+
+                    <button type="submit" class="btn btn-login w-100 text-white shadow-lg">
+                        Login to Account
+                    </button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <p class="mb-0 text-muted">
+                        Don’t have an account?
+                        <a href="{% url 'user_signup' %}" class="fw-bold text-danger text-decoration-none">Sign up</a>
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="bg-white mt-5 py-5 border-top">
+    <div class="container text-center text-muted">
+        <p class="mb-2 fw-600">Delicious cakes, happiness for you and your moments!</p>
+        <div class="d-flex justify-content-center gap-4 mb-3">
+            <a href="#" class="text-decoration-none">Privacy Policy</a>
+            <a href="#" class="text-decoration-none">Contact</a>
+            <a href="#" class="text-decoration-none">FAQs</a>
+        </div>
+        <p class="small mb-0">© 2025 MR CAKES. All rights reserved.</p>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

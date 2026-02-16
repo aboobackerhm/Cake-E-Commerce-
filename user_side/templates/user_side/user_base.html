@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{% block title %}MR CAKE{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome (already good, kept it) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" 
+          integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <meta name="color-scheme" content="light dark" />
+  </head>
+  <body class="min-h-full bg-white text-slate-900 antialiased">
+
+    <!-- Top Bar -->
+    <div class="bg-slate-900 text-white bg-black">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between py-2 text-xs">
+          <p class="text-pretty">Free shipping on orders over $50</p>
+          <nav aria-label="Utility" class="hidden gap-6 sm:flex">
+            <a href="#" class="opacity-90 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 rounded">Help</a>
+            <a href="#" class="opacity-90 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 rounded">Track Order</a>
+            <a href="#" class="opacity-90 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 rounded">Returns</a>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-20 bg-red-500 border-b border-gray-200">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between py-4">
+          <a href="{% url 'product_list' %}" class="font-sans text-xl font-bold tracking-wide text-white">MR CAKE</a>
+          
+          <form method="GET" action="{% url 'product_list' %}" class="hidden md:block w-full max-w-lg px-6">
+            <div class="relative">
+              <input id="search" name="search" type="search" value="{{ search_query|default:'' }}" 
+                     placeholder="Search cakes, pastries..." 
+                     class="w-full rounded-md border border-gray-300 bg-white py-2.5 pl-10 pr-3 text-sm placeholder-gray-500 focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-600/20" />
+              <svg aria-hidden="true" viewBox="0 0 20 20" class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500">
+                <path fill="currentColor" d="M13.9 12.5 18 16.6 16.6 18l-4.1-4.1a7 7 0 1 1 1.4-1.4zM8 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10"/>
+              </svg>
+            </div>
+          </form>
+
+          <div class="flex items-center gap-4">
+            <button type="button" class="md:hidden inline-flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600" data-mobile-filters-open aria-controls="mobile-filters" aria-expanded="false">
+              Filters
+            </button>
+            
+            <a href="{% url 'user_dashboard' %}" class="text-white hover:text-gray-200 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  </a>
+
+  <!-- Cart -->
+  <a href="{% url 'cart_detail' %}" class="relative text-white hover:text-gray-200 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+    </svg>
+    <!-- Optional cart count badge -->
+    {% if cart_count %}
+      <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+        {{ cart_count }}
+      </span>
+    {% endif %}
+  </a>
+
+  <!-- Wishlist (heart icon) -->
+  <a href="{% url 'wishlist' %}" class="text-white hover:text-gray-200 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+  </a>
+
+  <!-- Profile / Account -->
+  <a href="{% url 'profile_detail' %}" class="text-white hover:text-gray-200 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  </a>
+
+  <!-- Logout -->
+  <form method="POST" action="{% url 'user_logout' %}" class="inline">
+    {% csrf_token %}
+    <button type="submit" class="text-white hover:text-gray-200 transition">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+      </svg>
+    </button>
+  </form>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    {% block content %}{% endblock %}
+
+    <!-- Footer -->
+    <footer class="mt-8 border-t border-gray-200 bg-black">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 gap-8 py-10 sm:grid-cols-3 lg:grid-cols-6">
+          <div>
+            <h3 class="mb-3 text-sm text-red-500 font-bold">Shop</h3>
+            <ul class="space-y-2 text-sm font-semibold text-red-500">
+              <li><a class="hover:text-slate-900" href="{% url 'product_list' %}">Products</a></li>
+              <li><a class="hover:text-slate-900" href="#">Categories</a></li>
+              <li><a class="hover:text-slate-900" href="#">Custom</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="mb-3 text-sm font-bold text-red-500">Company</h3>
+            <ul class="space-y-2 text-sm text-red-500 font-semibold">
+              <li><a class="hover:text-slate-900" href="#">About</a></li>
+              <li><a class="hover:text-slate-900" href="#">Careers</a></li>
+              <li><a class="hover:text-slate-900" href="#">Contact</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="mb-3 text-sm font-bold text-red-500">Help</h3>
+            <ul class="space-y-2 text-sm text-red-500 font-semibold">
+              <li><a class="hover:text-slate-900" href="#">Support</a></li>
+              <li><a class="hover:text-slate-900" href="#">Shipping</a></li>
+              <li><a class="hover:text-slate-900" href="#">Returns</a></li>
+            </ul>
+          </div>
+          <div class="col-span-2 sm:col-span-1 lg:col-span-3 text-red-500">
+            <h3 class="mb-3 text-sm font-semibold text-red-500">Your Shop</h3>
+            <p class="max-w-md text-sm text-gray-600 text-red-500">Quality cakes for every celebration.</p>
+            <div class="mt-4 flex gap-3">
+              <a href="#" aria-label="Instagram" class="rounded-md border border-gray-300 p-2 text-red-500 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600">IG</a>
+              <a href="#" aria-label="Facebook" class="rounded-md border border-gray-300 p-2 text-red-500 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600">FB</a>
+              <a href="#" aria-label="X" class="rounded-md border border-gray-300 p-2 text-red-500 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600">X</a>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between border-t border-gray-200 py-6 text-xs text-gray-600">
+          <p>© 2025 MR CAKE. All rights reserved.</p>
+          <div class="flex gap-4">
+            <a href="#" class="hover:text-slate-900">Privacy</a>
+            <a href="#" class="hover:text-slate-900">Terms</a>
+            <a href="#" class="hover:text-slate-900">Cookies</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- JS for mobile filters -->
+    <script>
+      (function () {
+        const openBtn = document.querySelector('[data-mobile-filters-open]');
+        const drawer = document.getElementById('mobile-filters');
+        const closeEls = drawer ? drawer.querySelectorAll('[data-mobile-filters-close]') : [];
+
+        function open() {
+          if (!drawer) return;
+          drawer.classList.remove('hidden');
+          openBtn && openBtn.setAttribute('aria-expanded', 'true');
+          const firstClose = drawer.querySelector('[data-mobile-filters-close]');
+          firstClose && firstClose.focus();
+        }
+        function close() {
+          if (!drawer) return;
+          drawer.classList.add('hidden');
+          openBtn && openBtn.setAttribute('aria-expanded', 'false');
+          openBtn && openBtn.focus();
+        }
+
+        openBtn && openBtn.addEventListener('click', open);
+        closeEls.forEach((el) => el.addEventListener('click', close));
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && drawer && !drawer.classList.contains('hidden')) close();
+        });
+      })();
+    </script>
+    <!-- HTMX - tiny library for instant AJAX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  </body>
+</html>

@@ -1,0 +1,81 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block content %}
+<h1>{{ title }}</h1>
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<p>
+  {% if offer_type == 'product' %}
+    <a href="{% url 'product_offer_create' %}" class="button">+ Create New Product Offer</a>
+  {% else %}
+    <a href="{% url 'category_offer_create' %}" class="button">+ Create New Category Offer</a>
+  {% endif %}
+</p>
+
+<table class="offer-table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{% if offer_type == 'product' %}Product{% else %}Category{% endif %}</th>
+      <th>Discount %</th>
+      <th>Active</th>
+      <th>Valid From</th>
+      <th>Valid Until</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for offer in offers %}
+      <tr>
+        <td>{{ offer.id }}</td>
+        <td>
+          {% if offer_type == 'product' %}
+            {{ offer.product.name }}
+          {% else %}
+            {{ offer.category.name }}
+          {% endif %}
+        </td>
+        <td>{{ offer.discount_percentage }}%</td>
+        <td>
+          {% if offer.active %}
+            <span style="color: green;">Yes</span>
+          {% else %}
+            <span style="color: red;">No</span>
+          {% endif %}
+        </td>
+        <td>{{ offer.valid_from|date:"d M Y H:i" | default:"—" }}</td>
+        <td>{{ offer.valid_until|date:"d M Y H:i" | default:"—" }}</td>
+        <td>{{ offer.created_at|date:"d M Y" }}</td>
+        <td>
+          {% if offer_type == 'product' %}
+            <a href="{% url 'product_offer_update' offer.pk %}">Edit</a> |
+            <a href="{% url 'product_offer_delete' offer.pk %}">Delete</a>
+          {% else %}
+            <a href="{% url 'category_offer_update' offer.pk %}">Edit</a> |
+            <a href="{% url 'category_offer_delete' offer.pk %}">Delete</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="8" style="text-align:center; padding:20px;">No offers found.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<style>
+  .offer-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  .offer-table th, .offer-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+  .offer-table th { background: #f4f4f4; }
+  .button { background: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; }
+  .button:hover { background: #0056b3; }
+</style>
+{% endblock %}

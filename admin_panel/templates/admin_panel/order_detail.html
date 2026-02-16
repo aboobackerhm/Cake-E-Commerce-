@@ -1,0 +1,156 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="text-center mb-5 text-white fw-bold" style="background:#000;padding:15px;border-radius:8px;">
+        Order Details – {{ order.order_id }}
+    </h2>
+
+    {% if messages %}
+        <div class="alert-container mx-auto mb-4" style="max-width:600px;">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm mb-4" style="border:1px solid #000; border-radius:10px;">
+                <div class="card-header bg-dark text-white"><h5 class="mb-0">Order Summary</h5></div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr><th>Order ID</th><td><strong>{{ order.order_id }}</strong></td></tr>
+                        <tr>
+                            <th>Status</th>
+                            <td>
+                                <span class="badge 
+                                    {% if order.status == 'return_requested' %}bg-warning text-dark
+                                    {% elif order.status == 'returned' %}bg-dark
+                                    {% else %}{{ order.status|capfirst }}{% endif %} px-3 py-2">
+                                    {{ order.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr><th>Placed On</th><td>{{ order.created_at|date:"d M Y h:i A" }}</td></tr>
+                        <tr><th>Payment</th><td><strong>{{ order.get_payment_method_display }}</strong></td></tr>
+
+                        <!-- Return Information -->
+                        {% if order.status == 'return_requested' %}
+                        <tr>
+                            <th>Return Status</th>
+                            <td>
+                                <span class="badge bg-warning text-dark px-3 py-2">RETURN REQUESTED</span>
+                                <br><small>Requested on {{ order.return_requested_at|date:"d M Y h:i A" }}</small>
+                            </td>
+                        </tr>
+                        {% elif order.status == 'returned' %}
+                        <tr>
+                            <th>Return Status</th>
+                            <td>
+                                <span class="badge bg-success px-3 py-2">RETURNED & REFUNDED</span>
+                                {% if order.return_approved_at %}
+                                <br><small>Approved on {{ order.return_approved_at|date:"d M Y" }}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% elif order.return_rejected_at %}
+                        <tr>
+                            <th>Return Status</th>
+                            <td>
+                                <span class="badge bg-danger px-3 py-2">RETURN REJECTED</span>
+                                <br><small class="text-danger">{{ order.return_rejection_reason }}</small>
+                            </td>
+                        </tr>
+                        {% endif %}
+
+                        {% if order.return_reason %}
+                        <tr>
+                            <th>Return Reason</th>
+                            <td><em class="text-muted">"{{ order.return_reason }}"</em></td>
+                        </tr>
+                        {% endif %}
+
+                        {% if order.cancel_reason %}
+                        <tr><th>Cancel Reason</th><td class="text-danger">{{ order.cancel_reason }}</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+
+            <!-- Shipping Address -->
+            <div class="card shadow-sm" style="border:1px solid #000; border-radius:10px;">
+                <div class="card-header bg-dark text-white"><h5 class="mb-0">Shipping Address</h5></div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>{{ order.address.full_name }}</strong></p>
+                    <p class="mb-1">{{ order.address.phone }}</p>
+                    <p class="mb-1">{{ order.address.address_line_1 }}{% if order.address.address_line_2 %}<br>{{ order.address.address_line_2 }}{% endif %}</p>
+                    <p class="mb-0">{{ order.address.city }}, {{ order.address.state }} – {{ order.address.pincode }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Items -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100" style="border:1px solid #000; border-radius:10px;">
+                <div class="card-header bg-dark text-white"><h5 class="mb-0">Order Items</h5></div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th><th>Size</th><th class="text-center">Qty</th><th class="text-end">Price</th><th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if item.variant.product.images.first.image %}
+                                            <img src="{{ item.variant.product.images.first.image.url }}" class="me-3 rounded" style="width:50px;height:50px;object-fit:cover;">
+                                        {% endif %}
+                                        <div>{{ item.variant.product.name }}</div>
+                                    </div>
+                                </td>
+                                <td>{{ item.variant.get_size_display }}</td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">₹{{ item.price|floatformat:2 }}</td>
+                                <td class="text-end fw-bold text-success">₹{{ item.total|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-light">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><th>Subtotal</th><td class="text-end">₹{{ order.total_amount|floatformat:2 }}</td></tr>
+                        {% if order.tax > 0 %}<tr><th>Tax</th><td class="text-end">₹{{ order.tax|floatformat:2 }}</td></tr>{% endif %}
+                        {% if order.shipping > 0 %}<tr><th>Shipping</th><td class="text-end">₹{{ order.shipping|floatformat:2 }}</td></tr>{% endif %}
+                        {% if order.discount > 0 %}<tr><th>Discount</th><td class="text-end text-success">-₹{{ order.discount|floatformat:2 }}</td></tr>{% endif %}
+                        <tr class="border-top"><th class="h5">Grand Total</th><td class="text-end h5 fw-bold">₹{{ order.total_amount|floatformat:2 }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="text-center mt-5">
+        <a href="{% url 'order_management' %}" class="btn btn-dark btn-lg px-5">Back to Orders</a>
+        <button onclick="window.print()" class="btn btn-outline-dark btn-lg px-5 ms-3">Print Invoice</button>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body { background:white; }
+        .no-print, .card-header .btn { display:none !important; }
+        .card { border:1px solid #000; box-shadow:none; }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-success">
+                <div class="card-header bg-success text-white text-center">
+                    <h4 class="mb-0">Approve Return Request</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h5>Order ID: <strong>{{ order.order_id }}</strong></h5>
+                        <p class="text-muted">Customer: {{ order.user.username }}</p>
+                        <p class="text-muted">Requested on: {{ order.return_requested_at|date:"d M Y h:i A" }}</p>
+                        <p class="h5 text-success">Total Amount: ₹{{ order.total_amount|floatformat:2 }}</p>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>Customer's Return Reason:</strong><br>
+                        "{{ order.return_reason|default:"No reason provided" }}"
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <p class="lead text-center">
+                            Are you sure you want to <strong>approve</strong> this return?<br>
+                            Stock will be restored and order status will become <span class="badge bg-dark">Returned</span>.
+                        </p>
+
+                        <div class="d-grid gap-3 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'manage_return_requests' %}" class="btn btn-secondary btn-lg px-5">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-success btn-lg px-5">
+                                Yes, Approve Return
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

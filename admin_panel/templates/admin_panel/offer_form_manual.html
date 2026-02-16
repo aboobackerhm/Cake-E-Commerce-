@@ -1,0 +1,76 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% block content %}
+<h1>{{ title }}</h1>
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<form method="post" style="max-width: 600px;">
+  {% csrf_token %}
+
+  <div style="margin-bottom: 20px;">
+  <label for="id_{{ offer_type }}">
+    {% if offer_type == 'product' %}Product{% else %}Category{% endif %}:
+  </label><br>
+  <select name="{{ offer_type }}" id="id_{{ offer_type }}" required style="width: 100%; padding: 8px;">
+    <option value="">— Select —</option>
+    
+    {% if offer_type == 'product' %}
+      {% for obj in products %}
+        <option value="{{ obj.pk }}"
+                {% if offer and offer.product.pk == obj.pk %}selected{% endif %}>
+          {{ obj.name }}
+        </option>
+      {% endfor %}
+    {% else %}
+      {% for obj in categories %}
+        <option value="{{ obj.pk }}"
+                {% if offer and offer.category.pk == obj.pk %}selected{% endif %}>
+          {{ obj.name }}
+        </option>
+      {% endfor %}
+    {% endif %}
+  </select>
+</div>
+
+  <div style="margin-bottom: 20px;">
+    <label for="id_discount_percentage">Discount Percentage (%):</label><br>
+    <input type="number" name="discount_percentage" id="id_discount_percentage" 
+           step="0.01" min="0" max="100" required style="width: 100%; padding: 8px;"
+           value="{% if offer %}{{ offer.discount_percentage }}{% endif %}">
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <label>
+      <input type="checkbox" name="active" 
+             {% if offer and offer.active %}checked{% elif not offer %}checked{% endif %}>
+      Active (enable this offer)
+    </label>
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <label for="id_valid_from">Valid From:</label><br>
+    <input type="datetime-local" name="valid_from" id="id_valid_from" style="width: 100%; padding: 8px;"
+           value="{% if offer and offer.valid_from %}{{ offer.valid_from|date:'Y-m-d\TH:i' }}{% endif %}">
+  </div>
+
+  <div style="margin-bottom: 20px;">
+    <label for="id_valid_until">Valid Until:</label><br>
+    <input type="datetime-local" name="valid_until" id="id_valid_until" style="width: 100%; padding: 8px;"
+           value="{% if offer and offer.valid_until %}{{ offer.valid_until|date:'Y-m-d\TH:i' }}{% endif %}">
+  </div>
+
+  <div style="margin-top: 30px;">
+    <button type="submit" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+      Save Offer
+    </button>
+    <a href="{{ back_url }}" style="margin-left: 20px; color: #007bff; text-decoration: none;">Cancel / Back</a>
+  </div>
+</form>
+
+{% endblock %}

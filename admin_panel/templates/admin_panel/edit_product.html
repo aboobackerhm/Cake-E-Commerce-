@@ -1,0 +1,248 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Edit Product: {{ product.name|default:"Unknown Product" }}</h2>
+
+    <!-- Debug Output (Uncomment for debugging) -->
+    <!--
+    <div class="alert alert-info">
+        <h5>Debug Information</h5>
+        <pre>
+            Product ID: {{ product.id|default:"None" }}
+            Product Name: {{ product.name|default:"None" }}
+            Description: {{ product.description|default:"None" }}
+            Category: {{ product.category.name|default:"None" }}
+            Images Count: {{ product.images.count }}
+            Image URLs: {% for image in product.images.all %}{{ image.image.url|default:"None" }} {% endfor %}
+            Variant List: {{ variant_list|default:"None" }}
+            Categories: {{ categories|length }}
+            Form Data: {{ form_data|default:"None" }}
+            Images Count (New): {{ images_count|default:0 }}
+        </pre>
+    </div>
+    -->
+
+    <!-- Display error or success messages -->
+    {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if not categories %}
+        <div class="alert alert-warning text-center">
+            No active categories available. Please <a href="{% url 'category_management' %}">add a category</a> first.
+        </div>
+    {% else %}
+        <form method="POST" enctype="multipart/form-data" class="bg-light p-4 rounded shadow" id="editProductForm">
+            {% csrf_token %}
+            <!-- Product Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Product Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Product Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" value="{% if form_data %}{{ form_data.name|default:'' }}{% else %}{{ product.name|default:'' }}{% endif %}" required aria-describedby="nameError">
+                        <small id="nameError" class="form-text text-muted">Required field</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="4" required aria-describedby="descriptionError">{% if form_data %}{{ form_data.description|default:'' }}{% else %}{{ product.description|default:'' }}{% endif %}</textarea>
+                        <small id="descriptionError" class="form-text text-muted">Required field</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                        <select class="form-select" id="category" name="category" required aria-describedby="categoryError">
+                            <option value="">Select a category</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if form_data.category|stringformat:'i' == category.id|stringformat:'i' or product.category.id|default_if_none:'' == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small id="categoryError" class="form-text text-muted">Required field</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Size Variants -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Size Variants (Price and Stock)</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Enter price and stock for each size. Leave blank if the size is not available. At least one size must be provided.</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h6>500g</h6>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Price (₹)</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="price_500g" value="{% if form_data.price_500g %}{{ form_data.price_500g }}{% else %}{% for v in variant_list %}{% if v.size == '500g' %}{{ v.price|default_if_none:'' }}{% endif %}{% endfor %}{% endif %}" placeholder="e.g., 29.99">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">Stock</span>
+                                <input type="number" min="0" class="form-control" name="stock_500g" value="{% if form_data.stock_500g %}{{ form_data.stock_500g }}{% else %}{% for v in variant_list %}{% if v.size == '500g' %}{{ v.stock|default_if_none:'' }}{% endif %}{% endfor %}{% endif %}" placeholder="e.g., 100">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>750g</h6>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Price (₹)</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="price_750g" value="{% if form_data.price_750g %}{{ form_data.price_750g }}{% else %}{% for v in variant_list %}{% if v.size == '750g' %}{{ v.price|default_if_none:'' }}{% endif %}{% endfor %}{% endif %}" placeholder="e.g., 29.99">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">Stock</span>
+                                <input type="number" min="0" class="form-control" name="stock_750g" value="{% if form_data.stock_750g %}{{ form_data.stock_750g }}{% else %}{% for v in variant_list %}{% if v.size == '750g' %}{{ v.stock|default_if_none:'' }}{% endif %}{% endfor %}{% endif %}" placeholder="e.g., 100">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>1kg</h6>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Price (₹)</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="price_1kg" value="{% if form_data.price_1kg %}{{ form_data.price_1kg }}{% else %}{% for v in variant_list %}{% if v.size == '1kg' %}{{ v.price|default_if_none:'' }}{% endif %}{% endfor %}{% endif %}" placeholder="e.g., 29.99">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">Stock</span>
+                                <input type="number" min="0" class="form-control" name="stock_1kg" value="{% if form_data.stock_1kg %}{{ form_data.stock_1kg }}{% else %}{% for v in variant_list %}{% if v.size == '1kg' %}{{ v.stock|default_if_none:'' }}{% endif %}{% endfor %}{% endif %}" placeholder="e.g., 100">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6>2kg</h6>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">Price (₹)</span>
+                                <input type="number" step="0.01" min="0" class="form-control" name="price_2kg" value="{% if form_data.price_2kg %}{{ form_data.price_2kg }}{% else %}{% for v in variant_list %}{% if v.size == '2kg' %}{{ v.price|default_if_none:'' }}{% endif %}{% endfor %}{% endif %}" placeholder="e.g., 29.99">
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text">Stock</span>
+                                <input type="number" min="0" class="form-control" name="stock_2kg" value="{% if form_data.stock_2kg %}{{ form_data.stock_2kg }}{% else %}{% for v in variant_list %}{% if v.size == '2kg' %}{{ v.stock|default_if_none:'' }}{% endif %}{% endfor %}{% endif %}" placeholder="e.g., 100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Management -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Product Images (At Least 3 Required) <span class="text-danger">*</span></h5>
+                </div>
+                <div class="card-body">
+                    <!-- Existing Images -->
+                    <h6>Existing Images (Count: {{ product.images.count|default:0 }})</h6>
+                    <div class="d-flex flex-wrap mb-3">
+                        {% if product.images.exists %}
+                            {% for image in product.images.all %}
+                                <div class="m-2 text-center">
+                                    <img src="{{ image.image.url|default:'/static/images/placeholder.jpg' }}" style="max-width: 100px; border: 1px solid #ddd; border-radius: 5px;" alt="Product Image" onerror="this.src='{% static 'images/placeholder.jpg' %}';">
+                                    <div class="mt-1">
+                                        <input type="checkbox" name="delete_images" value="{{ image.id }}" id="delete_{{ image.id }}" class="delete-image-checkbox">
+                                        <label for="delete_{{ image.id }}" class="form-label">Delete</label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="m-2 text-center">
+                                <p class="text-muted">No images available for this product.</p>
+                                <img src="{% static 'images/placeholder.jpg' %}" style="max-width: 100px; border: 1px solid #ddd; border-radius: 5px;" alt="Placeholder">
+                            </div>
+                        {% endif %}
+                    </div>
+                    <!-- New Images -->
+                    <h6>Add New Images</h6>
+                    <input type="file" class="form-control" name="images" id="images" multiple accept="image/*" aria-describedby="imagesError">
+                    <small id="imagesError" class="form-text text-muted">Upload new images to add to the product. At least 3 images total are required. Current new images: <span id="imageCount">{{ images_count|default:0 }}</span>.</small>
+                    <div id="imagePreview" class="mt-3 d-flex flex-wrap"></div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="text-center">
+                <button type="submit" class="btn btn-success btn-lg" id="submitButton">Update Product</button>
+                <a href="{% url 'product_management' %}" class="btn btn-secondary btn-lg">Cancel</a>
+            </div>
+        </form>
+    {% endif %}
+
+    <!-- JavaScript for Image Preview and Validation -->
+    <script>
+        const imageInput = document.getElementById('images');
+        const preview = document.getElementById('imagePreview');
+        const imageCount = document.getElementById('imageCount');
+        const submitButton = document.getElementById('submitButton');
+
+        function updateImageCount() {
+            const deleteCheckboxes = document.querySelectorAll('.delete-image-checkbox:checked');
+            const existingImages = document.querySelectorAll('.delete-image-checkbox').length - deleteCheckboxes.length;
+            const newImages = imageInput.files.length;
+            const totalImages = existingImages + newImages;
+            imageCount.textContent = newImages;
+
+            submitButton.disabled = totalImages < 3;
+            if (totalImages < 3) {
+                alert('At least 3 images are required (existing images not deleted + new images).');
+            }
+        }
+
+        imageInput.addEventListener('change', function(e) {
+            preview.innerHTML = '';
+            const files = e.target.files;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.style.maxWidth = '100px';
+                    img.style.margin = '5px';
+                    img.style.border = '1px solid #ddd';
+                    img.style.borderRadius = '5px';
+                    preview.appendChild(img);
+                }
+            }
+            updateImageCount();
+        });
+
+        document.querySelectorAll('.delete-image-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateImageCount);
+        });
+
+        document.getElementById('editProductForm').addEventListener('submit', function(e) {
+            const deleteCheckboxes = document.querySelectorAll('.delete-image-checkbox:checked');
+            const existingImages = document.querySelectorAll('.delete-image-checkbox').length - deleteCheckboxes.length;
+            const newImages = imageInput.files.length;
+            const totalImages = existingImages + newImages;
+            if (totalImages < 3) {
+                e.preventDefault();
+                alert('Error: At least 3 images are required (existing images not deleted + new images).');
+            }
+        });
+
+        // Initial validation
+        updateImageCount();
+    </script>
+
+    <style>
+        .alert-container {
+            max-width: 600px;
+            margin: 0 auto 20px;
+        }
+        .card-header {
+            font-weight: bold;
+        }
+        .form-control, .form-select {
+            border-radius: 5px;
+        }
+        .btn-lg {
+            padding: 10px 30px;
+        }
+    </style>
+</div>
+{% endblock %}

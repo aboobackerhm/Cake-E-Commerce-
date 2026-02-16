@@ -1,0 +1,62 @@
+{% extends 'user_side/user_base.html' %}
+{% block title %}{% if address %}Edit{% else %}Add{% endif %} Address{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto p-6">
+  <h1 class="text-2xl font-bold mb-6">{% if address %}Edit{% else %}Add New{% endif %} Address</h1>
+  
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Full Name</label>
+      <input type="text" name="full_name" value="{{ address.full_name }}" required 
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-600 focus:ring-sky-600">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Phone</label>
+      <input type="text" name="phone" value="{{ address.phone }}" required 
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-600 focus:ring-sky-600">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Address Line 1</label>
+      <input type="text" name="address_line_1" value="{{ address.address_line_1 }}" required 
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-600 focus:ring-sky-600">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Address Line 2 (Optional)</label>
+      <input type="text" name="address_line_2" value="{{ address.address_line_2 }}" 
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-600 focus:ring-sky-600">
+    </div>
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">City</label>
+        <input type="text" name="city" value="{{ address.city }}" required 
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-600 focus:ring-sky-600">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">State</label>
+        <input type="text" name="state" value="{{ address.state }}" required 
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-600 focus:ring-sky-600">
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Pincode</label>
+      <input type="text" name="pincode" value="{{ address.pincode }}" required 
+             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-600 focus:ring-sky-600">
+    </div>
+    <div class="flex items-center">
+      <input type="checkbox" name="is_default" id="is_default" {% if address.is_default %}checked{% endif %}>
+      <label for="is_default" class="ml-2 text-sm text-gray-700">Set as default address</label>
+    </div>
+    
+    <div class="flex gap-3">
+      <button type="submit" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-sky-700">
+        {% if address %}Update{% else %}Add{% endif %} Address
+      </button>
+      <a href="{% url 'checkout' %}" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

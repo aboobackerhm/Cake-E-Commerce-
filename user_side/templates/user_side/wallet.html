@@ -1,0 +1,200 @@
+{% extends "user_side/user_profilebase.html" %}
+
+{% block title %}My Wallet - Cake Delight{% endblock %}
+
+{% block extra_head %}
+<style>
+    .wallet-hero {
+        background: linear-gradient(135deg, #ff6b6b, #feca57, #ff9f1c);
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .wallet-hero::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.25) 0%, transparent 60%);
+        pointer-events: none;
+    }
+    
+    .balance-amount {
+        font-size: 3.8rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    
+    .transaction-item {
+        transition: all 0.22s ease;
+        border-left: 4px solid transparent;
+    }
+    
+    .transaction-item:hover {
+        transform: translateX(6px);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        border-left-color: #ff6b6b;
+    }
+    
+    .credit-badge {
+        background: linear-gradient(90deg, #28a745, #34d058);
+    }
+    
+    .debit-badge {
+        background: linear-gradient(90deg, #dc3545, #ff6b6b);
+    }
+    
+    .empty-state {
+        opacity: 0.7;
+        transform: scale(0.95);
+        transition: all 0.4s ease;
+    }
+    
+    .btn-add-money {
+        background: #fff;
+        color: #ff6b6b;
+        font-weight: 700;
+        border: 2px solid #fff;
+        box-shadow: 0 6px 20px rgba(255,107,107,0.35);
+        transition: all 0.3s ease;
+    }
+    
+    .btn-add-money:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(255,107,107,0.45);
+        background: #fff;
+        color: #e65100;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <!-- Wallet Hero Card -->
+    <div class="wallet-hero text-white p-5 mb-5 shadow-lg">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <h3 class="fw-light mb-2 opacity-75">Available Balance</h3>
+                <div class="balance-amount">₹{{ wallet.balance|floatformat:2 }}</div>
+                <p class="lead mt-3 mb-4 opacity-90">
+                    Ready to use for your next cake order
+                </p>
+
+                <button class="btn btn-add-money btn-lg px-5 py-3 rounded-pill" id="add-money-btn">
+                    <i class="bi bi-plus-circle-fill me-2"></i> Add Money
+                </button>
+            </div>
+            <div class="col-lg-5 text-center d-none d-lg-block">
+                <i class="bi bi-wallet2 display-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Money Panel (hidden initially) -->
+    <div id="add-money-panel" class="card border-0 shadow mb-5" style="display:none; border-radius:16px; overflow:hidden;">
+        <div class="card-body p-4 p-md-5 bg-white">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0 fw-bold text-dark">Add Money to Wallet</h4>
+                <button class="btn-close" id="close-add-panel"></button>
+            </div>
+
+            <div class="mb-4">
+                <label for="topup-amount" class="form-label fw-bold fs-5">Amount (₹)</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-light fs-4">₹</span>
+                    <input type="number" class="form-control" id="topup-amount" 
+                           min="100" step="1" placeholder="100 or more">
+                </div>
+                <div class="form-text text-muted mt-2">
+                    Minimum top-up: ₹100 • Instant credit after payment
+                </div>
+            </div>
+
+            <button id="proceed-topup" class="btn btn-lg w-100 text-white fw-bold" 
+                    style="background: linear-gradient(90deg, #ff6b6b, #ff8c00); border:none;">
+                Pay with Razorpay → Secure & Instant
+            </button>
+        </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="card border-0 shadow" style="border-radius:16px;">
+        <div class="card-header bg-white border-0 pb-0 pt-4 px-4">
+            <h4 class="mb-0 fw-bold text-dark">
+                <i class="bi bi-clock-history me-2 text-warning"></i>
+                Transaction History
+            </h4>
+        </div>
+        
+        <div class="card-body px-0 pb-0">
+            {% if transactions %}
+                <div class="list-group list-group-flush">
+                    {% for tx in transactions %}
+                    <div class="list-group-item transaction-item px-4 py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-bold mb-1">{{ tx.description }}</div>
+                                <small class="text-muted">
+                                    {{ tx.created_at|date:"d M Y • h:i A" }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                {% if tx.amount > 0 %}
+                                    <div class="fw-bold text-success fs-5">+ ₹{{ tx.amount|floatformat:2 }}</div>
+                                    <span class="badge credit-badge px-3 py-2 mt-1">CREDIT</span>
+                                {% else %}
+                                    <div class="fw-bold text-danger fs-5">− ₹{{ tx.amount|floatformat:2|cut:"-" }}</div>
+                                    <span class="badge debit-badge px-3 py-2 mt-1">DEBIT</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5 empty-state">
+                    <i class="bi bi-wallet2 display-1 text-muted mb-3"></i>
+                    <h5 class="text-muted mt-3">No transactions yet</h5>
+                    <p class="text-muted">Add money or use your wallet for orders to see activity here</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Razorpay JS already included in base.html -->
+
+<script>
+// Toggle add money panel
+const addBtn = document.getElementById('add-money-btn');
+const panel = document.getElementById('add-money-panel');
+const closeBtn = document.getElementById('close-add-panel');
+
+addBtn.addEventListener('click', () => {
+    panel.style.display = 'block';
+    addBtn.scrollIntoView({ behavior: 'smooth' });
+});
+
+closeBtn.addEventListener('click', () => {
+    panel.style.display = 'none';
+});
+
+// Proceed payment logic (same as previous version)
+document.getElementById('proceed-topup').addEventListener('click', async () => {
+    const amount = parseFloat(document.getElementById('topup-amount').value);
+    
+    if (isNaN(amount) || amount < 100) {
+        alert('Please enter amount of ₹100 or more');
+        return;
+    }
+
+    // ... rest of the Razorpay fetch + checkout logic from previous message ...
+    // (copy the fetch + Razorpay initialization code here)
+});
+</script>
+
+{% endblock %}

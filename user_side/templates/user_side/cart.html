@@ -1,0 +1,189 @@
+{% extends 'user_side/user_base.html' %}
+{% load static %}
+
+{% block title %}Shopping Cart{% endblock %}
+
+{% block content %}
+<div class="bg-blue-50 py-3">
+  <div class="container mx-auto px-4">
+    <nav class="flex items-center space-x-2 text-sm">
+      <a href="{% url 'user_dashboard' %}" class="text-blue-600 hover:text-blue-800">Home</a>
+      <span class="text-gray-400">/</span>
+      <span class="text-gray-600">Cart</span>
+    </nav>
+  </div>
+</div>
+
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+      <!-- CART ITEMS -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+          <h1 class="text-3xl font-bold text-gray-800 mb-8">Your Cart</h1>
+
+          {% if cart_items %}
+            {% for item in cart_items %}
+            <div class="bg-gray-50 rounded-xl p-6 flex items-center justify-between relative
+                        {% if item.current_stock < item.quantity %}border-2 border-red-500{% endif %}"
+                 id="cart-item-{{ item.id }}">
+
+              <!-- OUT OF STOCK BADGE -->
+              {% if item.current_stock < item.quantity %}
+              <div class="absolute top-0 right-0 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-bl-lg">
+                Out of Stock
+              </div>
+              {% endif %}
+
+              <div class="flex items-center space-x-6">
+                <div class="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden">
+                  {% if item.variant.product.get_first_image %}
+                    <img src="{{ item.variant.product.get_first_image }}" class="w-full h-full object-cover">
+                  {% else %}
+                    <img src="{% static 'user_side/default.png' %}" class="w-full h-full object-cover">
+                  {% endif %}
+                </div>
+
+                <div>
+                  <h3 class="text-lg font-semibold">
+                    <a href="{% url 'product_details' item.variant.product.slug %}" class="hover:text-blue-600">
+                      {{ item.variant.product.name }}
+                    </a>
+                  </h3>
+                  <p class="text-sm text-gray-600">Size: {{ item.variant.get_size_display }}</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-6">
+                <!-- PRICE -->
+                <div class="text-right w-24">
+                  <span class="text-xl font-bold text-gray-800">
+                    ₹{{ item.variant.price|floatformat:2 }}
+                  </span>
+                </div>
+
+                <!-- QUANTITY -->
+                <div class="flex items-center space-x-1">
+                  <button class="w-8 h-8 border rounded-l qty-btn" data-id="{{ item.id }}" data-action="dec"
+                          {% if item.quantity <= 1 %}disabled{% endif %}>−</button>
+                  <span id="qty-{{ item.id }}" class="w-12 text-center font-medium">{{ item.quantity }}</span>
+                  <button class="w-8 h-8 border rounded-r qty-btn" data-id="{{ item.id }}" data-action="inc"
+                          {% if item.quantity >= item.current_stock %}disabled{% endif %}>+</button>
+                </div>
+
+                <!-- REMOVE -->
+                <button class="text-red-500 hover:text-red-700 remove-btn" data-id="{{ item.id }}">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-center text-gray-600 py-10">Your cart is empty.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- ORDER SUMMARY -->
+      <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-xl p-8 sticky top-8">
+          <h2 class="text-2xl font-bold mb-6">Order Summary</h2>
+
+          <div class="flex justify-between mb-3">
+            <span>Subtotal</span>
+            <span>₹{{ subtotal|floatformat:2 }}</span>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="flex justify-between text-lg font-bold">
+            <span>Total</span>
+            <span id="grand-total">₹{{ grand_total|floatformat:2 }}</span>
+          </div>
+
+          <button id="checkout-btn"
+                  class="w-full mt-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all">
+            Proceed to Checkout
+          </button>
+
+          <a href="{% url 'product_list' %}"
+             class="block text-center mt-3 text-blue-600 hover:text-blue-800 text-sm">
+            Continue Shopping
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const csrf = "{{ csrf_token }}";
+
+  // ---- Quantity buttons ----
+  document.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.onclick = function () {
+      const id = this.dataset.id;
+      const action = this.dataset.action;
+      const url = action === 'inc'
+        ? "{% url 'increment_quantity' 0 %}".replace('0', id)
+        : "{% url 'decrement_quantity' 0 %}".replace('0', id);
+
+      fetch(url, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'success') {
+          document.getElementById(`qty-${id}`).textContent = data.new_quantity;
+          document.getElementById('grand-total').textContent = `₹${data.grand_total.toFixed(2)}`;
+
+          // disable buttons
+          const dec = document.querySelector(`[data-id="${id}"][data-action="dec"]`);
+          const inc = document.querySelector(`[data-id="${id}"][data-action="inc"]`);
+          dec.disabled = data.new_quantity <= 1;
+          inc.disabled = data.new_quantity >= data.available_stock;
+        } else {
+          alert(data.message || 'Error');
+        }
+      });
+    };
+  });
+
+  // ---- Checkout button ----
+ document.getElementById("checkout-btn").addEventListener("click", function () {
+      if ("{{ cart_items|length }}" === "0") {
+        showToast("Cart is empty", "warning");
+        return;
+      }
+      showLoading();
+      fetch("{% url 'validate_cart_stock' %}", {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+      .then(r => r.json())
+      .then(data => {
+        hideLoading();
+        if (data.status === "ok") {
+          window.location.href = "{% url 'checkout' %}";
+        } else {
+          let msg = "Out of stock:\n";
+          data.items.forEach(i => msg += `${i.product} (${i.size}): ${i.available} left\n`);
+          showToast(msg, "danger");
+        }
+      })
+      .catch(() => {
+        hideLoading();
+        showToast("Validation failed", "danger");
+      });
+    });
+    
+});
+</script>
+{% endblock %}

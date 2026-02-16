@@ -1,0 +1,68 @@
+{% extends "user_side/user_base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col md:flex-row gap-8">
+
+        <!-- Left Sidebar Navigation -->
+        <aside class="md:w-64">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-lg font-bold text-slate-900 mb-4">My Account</h2>
+                <nav class="space-y-2">
+                    <a href="{% url 'profile_detail' %}" 
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'profile_detail' %}bg-slate-100 font-bold text-sky-600{% endif %}">
+                        Profile
+                    </a>
+
+                    <a href="{% url 'order_list' %}" 
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'order_list' %}bg-slate-100 font-bold text-sky-600{% endif %}">
+                        Orders
+                    </a>
+
+                    <a href="{% url 'my_wallet' %}" 
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100">
+                        Wallet
+                    </a>
+
+                    <a href="{% url 'wishlist' %}"
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'profile_edit' %}bg-slate-100 font-bold text-sky-600{% endif %}">
+                        Wish list
+                    </a>
+
+                    <a href="{% url 'password_change' %}" 
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'password_change' %}bg-slate-100 font-bold text-sky-600{% endif %}">
+                        Change Password
+                    </a>
+
+                    <!-- ADDRESSES - THIS WAS COMPLETELY WRONG BEFORE -->
+                    <a href="{% url 'address' %}" 
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'address' %}bg-slate-100 font-bold text-sky-600{% endif %}">
+                        Addresses
+                    </a>
+
+                    <!-- Refer & Earn (if you have this page) -->
+                    <a href="{% url 'all_coupons'  %}" 
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'refer_earn' %}bg-slate-100 font-bold text-sky-600{% endif %}">
+                        Refer & Earn
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-lg text-sm font-medium {% if message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block profile_section_content %}
+            {% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}

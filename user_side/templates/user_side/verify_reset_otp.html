@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" /> -->
+
+    <title>Verify OTP</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-6 text-center">Verify OTP</h2>
+        {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                    <div class="bg-{% if message.tags == 'error' %}red-100 text-red-700{% else %}green-100 text-green-700{% endif %} px-4 py-2 rounded">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        <p class="mb-4 text-center">An OTP has been sent to your email. It is valid for 5 minutes.</p>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="otp" class="block text-sm font-medium text-gray-700">Enter OTP</label>
+                <input type="text" name="otp" id="otp"
+                       class="mt-1 p-2 w-full border rounded-md {% if errors.otp %}border-red-500{% endif %}"
+                       required>
+                {% if errors.otp %}
+                    <p class="text-red-500 text-sm mt-1">{{ errors.otp }}</p>
+                {% endif %}
+            </div>
+            <button type="submit"
+                    class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Verify OTP</button>
+        </form>
+        <div class="mt-4 text-center">
+            <p id="timer" class="text-gray-600">Resend OTP in <span id="countdown">30</span> seconds</p>
+            <form method="POST" action="{% url 'resend_reset_otp' %}" id="resend-form" class="hidden">
+                {% csrf_token %}
+                <button type="submit" id="resend-btn"
+                        class="text-blue-500 hover:underline">Resend OTP</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        let countdown = 30;
+        const countdownElement = document.getElementById('countdown');
+        const resendForm = document.getElementById('resend-form');
+        const resendBtn = document.getElementById('resend-btn');
+
+        const timer = setInterval(() => {
+            countdown--;
+            countdownElement.textContent = countdown;
+            if (countdown <= 0) {
+                clearInterval(timer);
+                resendForm.classList.remove('hidden');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

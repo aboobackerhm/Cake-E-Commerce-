@@ -1,0 +1,17 @@
+<form hx-post="{% url 'toggle_wishlist' product.id %}"
+      hx-target="#wishlist-{{ product.id }}"
+      hx-swap="outerHTML"
+      class="inline">
+  {% csrf_token %}
+  <button type="submit" 
+          class="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm transition hover:scale-110 focus:outline-none shadow-sm"
+          title="{% if is_wishlisted %}Remove from Wishlist{% else %}Add to Wishlist{% endif %}">
+    
+    {% if is_wishlisted %}
+      <i class="fa-solid fa-heart text-red-500 text-xl"></i>
+    {% else %}
+      <i class="fa-regular fa-heart text-gray-500 hover:text-red-500 text-xl"></i>
+    {% endif %}
+
+  </button>
+</form>

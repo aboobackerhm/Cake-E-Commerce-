@@ -1,0 +1,128 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+{% block title %}Add New Coupon{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center mt-5">
+  <div class="container-box" style="max-width: 550px; width: 100%;">
+    <h2 class="page-title text-center mb-4">Add New Coupon</h2>
+
+    <!-- Django messages -->
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-success text-center alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+
+      <!-- Coupon Code -->
+      <div class="mb-3">
+        <label for="code" class="form-label">Coupon Code <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="code" name="code" 
+               placeholder="e.g. WELCOME20, SUMMER25" required 
+               style="text-transform: uppercase;" maxlength="20">
+      </div>
+
+      <!-- Discount Percentage -->
+      <div class="mb-3">
+        <label for="discount_percentage" class="form-label">Discount Percentage (%)</label>
+        <input type="number" class="form-control" id="discount_percentage" name="discount_percentage" 
+               min="0" max="100" value="0" placeholder="e.g. 20 (leave 0 if fixed amount)">
+      </div>
+
+      <!-- Fixed Discount Amount -->
+      <div class="mb-3">
+        <label for="discount_amount" class="form-label">Fixed Discount Amount (₹)</label>
+        <input type="number" class="form-control" id="discount_amount" name="discount_amount" 
+               min="0" step="0.01" value="0.00" placeholder="e.g. 100 (leave 0 if percentage)">
+      </div>
+
+      <!-- Minimum Purchase -->
+      <div class="mb-3">
+        <label for="min_purchase_amount" class="form-label">Minimum Purchase Amount (₹)</label>
+        <input type="number" class="form-control" id="min_purchase_amount" name="min_purchase_amount" 
+               min="0" step="0.01" value="0.00" placeholder="Coupon applies only above this amount">
+      </div>
+
+      <!-- Max Discount (optional) -->
+      <div class="mb-3">
+        <label for="max_discount_amount" class="form-label">Maximum Discount Amount (₹) - optional</label>
+        <input type="number" class="form-control" id="max_discount_amount" name="max_discount_amount" 
+               min="0" step="0.01" value="" placeholder="Maximum cap on discount">
+      </div>
+
+      <!-- Valid From -->
+      <div class="mb-3">
+        <label for="valid_from" class="form-label">Valid From</label>
+        <input type="datetime-local" class="form-control" id="valid_from" name="valid_from">
+      </div>
+
+      <!-- Valid Until -->
+      <div class="mb-3">
+        <label for="valid_until" class="form-label">Valid Until (optional)</label>
+        <input type="datetime-local" class="form-control" id="valid_until" name="valid_until">
+      </div>
+
+      <!-- Usage Limit -->
+      <div class="mb-3">
+        <label for="usage_limit" class="form-label">Usage Limit (0 = unlimited)</label>
+        <input type="number" class="form-control" id="usage_limit" name="usage_limit" 
+               min="0" value="0">
+      </div>
+
+      <!-- One time per user -->
+      <div class="mb-4 form-check">
+        <input type="checkbox" class="form-check-input" id="is_one_time_per_user" name="is_one_time_per_user" checked>
+        <label class="form-check-label" for="is_one_time_per_user">
+          One time use per customer
+        </label>
+      </div>
+
+      <!-- Active status -->
+      <div class="mb-4 form-check">
+        <input type="checkbox" class="form-check-input" id="active" name="active" checked>
+        <label class="form-check-label" for="active">
+          Active (can be used immediately)
+        </label>
+      </div>
+
+      <!-- Buttons -->
+      <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'coupon_list' %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">Add Coupon</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .container-box {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid #e0e0e0;
+  }
+  .page-title {
+    color: #f97316;
+    font-weight: 700;
+  }
+  .form-label {
+    font-weight: 500;
+    color: #374151;
+  }
+  .btn-primary {
+    background-color: #f97316;
+    border-color: #f97316;
+  }
+  .btn-primary:hover {
+    background-color: #ea580c;
+    border-color: #ea580c;
+  }
+</style>
+{% endblock %}

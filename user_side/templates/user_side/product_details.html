@@ -1,0 +1,488 @@
+{% extends 'user_side/user_base.html' %}
+
+{% block title %}{{ product.name }} - Product Details{% endblock %}
+
+{% block content %}
+    <main id="main" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <!-- Breadcrumbs -->
+        <nav class="py-4 text-sm text-gray-600" aria-label="Breadcrumb">
+            <ol class="flex flex-wrap items-center gap-2">
+                <li><a href="/" class="hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 rounded">Home</a></li>
+                <li aria-hidden="true">/</li>
+                <li><a href="{% url 'product_list' %}" class="hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 rounded">Products</a></li>
+                <li aria-hidden="true">/</li>
+                <li><a href="{% url 'product_list' %}?category={{ product.category.id }}" class="hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600 rounded">{{ product.category.name }}</a></li>
+                <li aria-hidden="true">/</li>
+                <li aria-current="page" class="text-slate-900 font-medium">{{ product.name }}</li>
+            </ol>
+        </nav>
+
+        {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                    <div class="rounded-md p-4 {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <!-- Image Section -->
+            <div class="lg:col-span-6 relative">
+                {% if product.has_offer %}
+                    <div class="absolute top-4 left-4 z-20 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-md">
+                        -{{ product.best_offer_perc|floatformat:0 }}% OFF
+                    </div>
+                {% endif %}
+
+                <div class="zoom-container rounded-lg border border-gray-200 bg-white overflow-hidden" id="zoom-image">
+                    <img src="{% if product.get_first_image %}{{ product.get_first_image }}{% else %}https://via.placeholder.com/320x480?text=No+Image{% endif %}"
+                         id="main-image"
+                         alt="{{ product.name }}"
+                         class="aspect-square w-full object-cover"
+                         style="width:500px; height:500px;">
+                    <div class="zoom-lens hidden lg:block" id="zoom-lens"></div>
+                </div>
+
+                <div class="zoom-result hidden lg:block absolute top-0 left-[520px] w-[500px] h-[500px] border border-gray-200 bg-white" id="zoom-result"></div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    {% for image in product.images.all %}
+                        <img src="{{ image.image.url }}"
+                             alt="{{ image.alt_text|default:product.name }}"
+                             class="h-16 w-16 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-80 transition"
+                             onclick="updateMainImage('{{ image.image.url }}')">
+                    {% empty %}
+                        <img src="https://via.placeholder.com/80?text=No+Image" alt="No image" class="h-16 w-16 object-cover rounded border">
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Details Section -->
+            <div class="lg:col-span-6">
+                <h1 class="text-pretty text-xl font-semibold tracking-tight mb-2">{{ product.name }}</h1>
+
+                <!-- Rating -->
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="flex">
+                        {% for i in "12345" %}
+                            <svg class="w-5 h-5 {% if i|add:0 <= avg_rating %}text-yellow-400{% else %}text-gray-300{% endif %}" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                            </svg>
+                        {% endfor %}
+                    </div>
+                    <span class="text-sm text-gray-600">({{ rating_count }} reviews)</span>
+                </div>
+
+                <!-- Price -->
+                <div class="mb-6" id="price-display">
+                    {% if selected_variant %}
+                        {% if product.has_offer %}
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-baseline gap-3">
+                                    <span class="text-3xl font-bold text-red-600">₹{{ selected_variant.discounted_price|floatformat:2 }}</span>
+                                    <span class="text-xl text-gray-500 line-through">₹{{ selected_variant.original_price|floatformat:2 }}</span>
+                                </div>
+                                <p class="text-sm text-green-600 font-medium">
+                                    Save ₹{{ selected_variant.savings_amount|floatformat:2 }} ({{ product.best_offer_perc|floatformat:0 }}% off)
+                                </p>
+                            </div>
+                        {% else %}
+                            <span class="text-3xl font-bold text-gray-900">₹{{ selected_variant.price|floatformat:2 }}</span>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-sm text-red-600">No variants available</p>
+                    {% endif %}
+                </div>
+
+                <!-- Stock -->
+                <div class="mb-4">
+                    {% if selected_variant and selected_variant.stock > 0 %}
+                        <p class="text-sm text-green-600">In Stock ({{ selected_variant.stock }} available)</p>
+                    {% else %}
+                        <p class="text-sm text-red-600">Out of Stock</p>
+                    {% endif %}
+                </div>
+
+                {% if variants.exists %}
+                <form id="add-to-cart-form" class="mb-6">
+                    {% csrf_token %}
+                    <input type="hidden" name="variant_id" id="selected-variant-id" value="{{ selected_variant.id }}">
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-end">
+                        <!-- Size -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                            <div class="flex flex-wrap gap-2" id="size-options">
+                                {% for v in variants %}
+                                    {% if v.stock > 0 %}
+                                        <button type="button"
+                                                class="size-option px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:border-gray-700 transition-all duration-200 {% if v == selected_variant %}bg-black text-white border-black{% endif %}"
+                                                data-id="{{ v.id }}"
+                                                data-original-price="{{ v.original_price|floatformat:2 }}"
+                                                data-discounted-price="{{ v.discounted_price|floatformat:2 }}"
+                                                data-savings-amount="{{ v.savings_amount|floatformat:2 }}"
+                                                data-has-offer="{{ product.has_offer }}">
+                                            {{ v.get_size_display }}
+                                        </button>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Quantity -->
+                        <div class="flex flex-col items-start">
+                            <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Qty</label>
+                            <div class="flex items-center border border-gray-300 rounded-md shadow-sm w-32">
+                                <button type="button" id="decrement-btn" class="px-3 py-2 text-gray-600 hover:text-white hover:bg-sky-600 rounded-l-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all" onclick="changeQuantity(-1)" {% if quantity <= 1 %}disabled{% endif %}>−</button>
+                                <input type="number" name="quantity" id="quantity" value="{{ quantity|default:1 }}" min="1" max="5" class="w-full text-center border-0 focus:ring-0 outline-none text-gray-700 font-medium" readonly>
+                                <button type="button" id="increment-btn" class="px-3 py-2 text-gray-600 hover:text-white hover:bg-sky-600 rounded-r-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all" onclick="changeQuantity(1)" {% if quantity >= 5 %}disabled{% endif %}>+</button>
+                            </div>
+                        </div>
+
+                        <!-- Add to Cart -->
+                        <div class="self-end">
+                            <button type="submit" id="add-to-cart-btn" class="w-full rounded-md bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                                Add to Cart
+                            </button>
+                        </div>
+                       
+                        <!-- Wishlist (moved inside form area for better alignment) -->
+                        {% if request.user.is_authenticated %}
+                            <div class=" " id="wishlist-{{ product.id }}">
+                                <button type="button" 
+                                        onclick="toggleWishlist(this, {{ product.id }})"
+                                        class="flex h-10 w-10 items-center justify-center rounded-full bg-black/80 backdrop-blur-sm shadow hover:scale-110 transition">
+                                    {% if product.id in wishlisted_product_ids %}
+                                        <i class="fa-solid fa-heart text-red-500 text-xl"></i>
+                                    {% else %}
+                                        <i class="fa-regular fa-heart text-gray-500 hover:text-red-500 text-xl transition-colors"></i>
+                                    {% endif %}
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <p id="stock-warning" class="mt-2 text-sm text-red-600 hidden">
+                        Only <span id="max-stock"></span> left!
+                    </p>
+                </form>
+
+                {% if cart_item %}
+                    <div class="mt-4">
+                        <form id="remove-from-cart-form-{{ cart_item.id }}" class="inline" onsubmit="event.preventDefault(); confirmRemove({{ cart_item.id }});">
+                            {% csrf_token %}
+                            <input type="hidden" name="item_id" value="{{ cart_item.id }}">
+                            <button type="submit" class="inline-flex items-center gap-1 text-sm font-medium text-red-600 hover:text-white hover:bg-red-600 border border-red-600 rounded-md px-3 py-1.5 transition-all duration-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                                Remove from Cart
+                            </button>
+                        </form>
+                    </div>
+                {% endif %}
+
+                <div id="ajax-message" class="mt-4"></div>
+
+                {% else %}
+                    <p class="text-red-600 font-medium">This product is currently unavailable.</p>
+                {% endif %}
+
+                <!-- Description -->
+                <div class="mb-6">
+                    <h2 class="text-sm font-medium text-gray-600 mb-2">Description</h2>
+                    <p class="text-sm text-gray-600">{{ product.description|default:"No description available." }}</p>
+                </div>
+
+                <!-- Reviews -->
+                <div>
+                    <h2 class="text-sm font-medium text-gray-600 mb-2">Reviews</h2>
+                    {% for review in reviews %}
+                        <div class="border-t border-gray-200 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium">{{ review.user }}</span>
+                                <div class="flex">
+                                    {% for i in "12345" %}
+                                        <svg class="w-4 h-4 {% if i|add:0 <= review.rating %}text-yellow-400{% else %}text-gray-300{% endif %}" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                        </svg>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">{{ review.comment }}</p>
+                        </div>
+                    {% empty %}
+                        <p class="text-sm text-gray-600">No reviews yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if related_products %}
+            <section class="mt-12">
+                <h2 class="text-lg font-semibold tracking-tight mb-4">Related Products</h2>
+                <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                    {% for related in related_products %}
+                        <li class="group rounded-lg border border-gray-200 bg-white overflow-hidden">
+                            <a href="{% url 'product_details' related.id %}" class="block">
+                                {% with first_image=related.images.first %}
+                                    {% if first_image %}
+                                        <img src="{{ first_image.image.url }}" alt="{{ related.name }}" class="aspect-square w-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                    {% else %}
+                                        <img src="https://via.placeholder.com/320x480?text=No+Image" alt="{{ related.name }}" class="aspect-square w-full object-cover">
+                                    {% endif %}
+                                {% endwith %}
+                            </a>
+                            <div class="p-3 space-y-1">
+                                <h3 class="text-sm font-medium"><a href="{% url 'product_details' related.id %}" class="hover:underline">{{ related.name }}</a></h3>
+                                <p class="text-sm text-gray-600">{{ related.description|truncatewords:10 }}</p>
+                                <div class="flex items-center justify-between pt-2">
+                                    <p class="font-semibold">₹{{ related.get_min_price|default:"N/A"|floatformat:2 }}</p>
+                                    <a href="{% url 'product_details' related.id %}" class="text-sm border border-gray-300 rounded px-3 py-1 hover:bg-gray-50">View</a>
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+    </main>
+
+    <style>
+        .zoom-container {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            overflow: hidden;
+        }
+        .zoom-lens {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border: 2px solid #e5e7eb;
+            background: rgba(255,255,255,0.25);
+            pointer-events: none;
+            display: none;
+        }
+       .zoom-result {
+            position: absolute;
+            top: 0;
+            left: 520px; /* adjust as needed */
+            width: 500px;
+            height: 500px;
+            border: 1px solid #ccc;
+            background-repeat: no-repeat;
+            display: none;
+        }
+        @media (max-width: 1024px) {
+            .zoom-lens, .zoom-result {
+                display: none !important;
+            }
+        }
+    </style>
+
+    <!-- ────────────────────────────────────────────── -->
+    <!--                   JAVASCRIPT                   -->
+    <!-- ────────────────────────────────────────────── -->
+
+    <script>
+        // ================= Zoom Feature =================
+const zoomContainer = document.getElementById('zoom-image');
+        const mainImage = document.getElementById('main-image');
+        const zoomLens = document.getElementById('zoom-lens');
+        const zoomResult = document.getElementById('zoom-result');
+
+        function updateMainImage(imageUrl) {
+            mainImage.src = imageUrl;
+            zoomResult.style.backgroundImage = `url('${imageUrl}')`;
+        }
+        mainImage.onload = function () {
+        zoomResult.style.backgroundImage = `url('${mainImage.src}')`;
+        zoomResult.style.backgroundSize = `${mainImage.width * 3}px ${mainImage.height * 3}px`;
+        };
+
+        zoomResult.style.backgroundImage = `url('${mainImage.src}')`;
+        zoomResult.style.backgroundSize = `${mainImage.width * 3}px ${mainImage.height * 3}px`;
+
+
+        zoomContainer.addEventListener('mouseenter', () => {
+            zoomLens.style.display = 'block';
+            zoomResult.style.display = 'block';
+        });
+
+        zoomContainer.addEventListener('mousemove', (e) => {
+            const rect = zoomContainer.getBoundingClientRect();
+            const lensW = zoomLens.offsetWidth;
+            const lensH = zoomLens.offsetHeight;
+
+            let x = e.clientX - rect.left - lensW / 2;
+            let y = e.clientY - rect.top - lensH / 2;
+
+            // clamp lens inside container
+            x = Math.max(0, Math.min(x, rect.width - lensW));
+            y = Math.max(0, Math.min(y, rect.height - lensH));
+
+            zoomLens.style.left = x + "px";
+            zoomLens.style.top = y + "px";
+
+            const zoomRatio = 3; // must match background-size: 1500px (500 * 3)
+            zoomResult.style.backgroundPosition = `-${x * zoomRatio}px -${y * zoomRatio}px`;
+        })
+
+        zoomContainer.addEventListener('mouseleave', () => {
+            zoomLens.style.display = 'none';
+            zoomResult.style.display = 'none';
+        });
+
+        // ================= Quantity =================
+        function changeQuantity(change) {
+            const input = document.getElementById('quantity');
+            const dec = document.getElementById('decrement-btn');
+            const inc = document.getElementById('increment-btn');
+
+            let val = parseInt(input.value) || 1;
+            val += change;
+            val = Math.max(1, Math.min(5, val));
+
+            input.value = val;
+            dec.disabled = (val <= 1);
+            inc.disabled = (val >= 5);
+        }
+
+        // ================= Size Selection & Price Update =================
+        function updatePriceDisplay(original, discounted, savings, hasOffer) {
+            const container = document.getElementById('price-display');
+            if (hasOffer === 'True') {
+                container.innerHTML = `
+                    <div class="flex flex-col gap-1">
+                        <div class="flex items-baseline gap-3">
+                            <span class="text-3xl font-bold text-red-600">₹${discounted}</span>
+                            <span class="text-xl text-gray-500 line-through">₹${original}</span>
+                        </div>
+                        <p class="text-sm text-green-600 font-medium">
+                            Save ₹${savings} ({{ product.best_offer_perc|floatformat:0 }}% off)
+                        </p>
+                    </div>`;
+            } else {
+                container.innerHTML = `<span class="text-3xl font-bold text-gray-900">₹${original}</span>`;
+            }
+        }
+
+        document.querySelectorAll('.size-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.size-option').forEach(b => {
+                    b.classList.remove('bg-black', 'text-white', 'border-black');
+                    b.classList.add('border-gray-300');
+                });
+
+                btn.classList.add('bg-black', 'text-white', 'border-black');
+                btn.classList.remove('border-gray-300');
+
+                document.getElementById('selected-variant-id').value = btn.dataset.id;
+
+                updatePriceDisplay(
+                    btn.dataset.originalPrice,
+                    btn.dataset.discountedPrice,
+                    btn.dataset.savingsAmount,
+                    btn.dataset.hasOffer
+                );
+            });
+        });
+
+        // Auto-select first size on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstActive = document.querySelector('.size-option.bg-black') || document.querySelector('.size-option');
+            if (firstActive) {
+                firstActive.click();   // triggers price update + selection style
+            }
+        });
+
+        // ================= Wishlist toggle =================
+        function toggleWishlist(btn, productId) {
+            const icon = btn.querySelector('i');
+            const form = btn.closest('form') || document.createElement('form'); // fallback
+
+            fetch("{% url 'toggle_wishlist' product.id %}", {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'added') {
+                    icon.classList.remove('fa-regular');
+                    icon.classList.add('fa-solid', 'text-red-500');
+                    icon.classList.remove('text-gray-500', 'hover:text-red-500');
+                } else if (data.status === 'removed') {
+                    icon.classList.remove('fa-solid', 'text-red-500');
+                    icon.classList.add('fa-regular', 'text-gray-500', 'hover:text-red-500');
+                }
+            })
+            .catch(err => console.error(err));
+        }
+
+        // ================= Add to Cart (AJAX) =================
+        document.getElementById('add-to-cart-form')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const btn = document.getElementById('add-to-cart-btn');
+            const msg = document.getElementById('ajax-message');
+
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+
+            fetch("{% url 'add_to_cart' %}", {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.querySelector('#cart-count')?.update(data.cart_count);
+                    msg.innerHTML = `<div class="rounded-md bg-green-50 p-4 text-green-700">${data.msg} <a href="${data.cart_url}" class="underline font-medium">View Cart</a></div>`;
+                    document.getElementById('quantity').value = 1;
+                } else {
+                    msg.innerHTML = `<div class="rounded-md bg-red-50 p-4 text-red-700">${data.msg}</div>`;
+                }
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Add to Cart';
+            });
+        });
+
+        // ================= Remove from Cart =================
+        function confirmRemove(itemId) {
+            if (!confirm("Remove this item from cart?")) return;
+
+            const form = document.getElementById(`remove-from-cart-form-${itemId}`);
+            const msg = document.getElementById('ajax-message');
+
+            fetch("{% url 'remove_from_cart' %}", {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.querySelector('#cart-count')?.update(data.cart_count);
+                    form.closest('div').remove();
+                    msg.innerHTML = `<div class="rounded-md bg-green-50 p-4 text-green-700">${data.msg} <a href="${data.cart_url}" class="underline font-medium">View Cart</a></div>`;
+                }
+            });
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+
+    <h2 class="text-center mb-4 text-white fw-bold" style="background-color: #000; padding: 15px; border-radius: 8px;">
+        Order Management
+    </h2>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="alert-container mx-auto mb-4" style="max-width:600px;">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Top Bar: Search + Return Requests Button -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-6">
+            <form method="GET" class="input-group shadow-sm">
+                <input type="text" class="form-control bg-light" name="q" value="{{ query|default:'' }}" placeholder="Search by Order ID, Username, Phone...">
+                <button class="btn btn-dark" type="submit">Search</button>
+            </form>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{% url 'manage_return_requests' %}" class="btn btn-warning fw-bold px-4 py-2 shadow-sm">
+                Return Requests
+                <span class="badge bg-danger fs-6">{{ pending_returns_count|default:0 }}</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="card shadow-lg" style="border: 2px solid #000; border-radius:12px; overflow:hidden;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead style="background:#000; color:white;">
+                        <tr>
+                            <th class="ps-4">Order ID</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Reason / Note</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in page_obj %}
+                        <tr>
+                            <td class="ps-4">
+                                <span class="fw-bold text-dark">{{ order.order_id }}</span>
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ order.user.username }}</div>
+                                <small class="text-muted">{{ order.user.email }}</small>
+                            </td>
+
+                            <!-- STATUS DROPDOWN - FULLY WORKING -->
+                            <td>
+                                <form method="post" action="{% url 'update_order_status' order.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <select name="status" class="form-select form-select-sm rounded-pill status-select fw-bold"
+                                            onchange="this.form.submit()"
+                                            {% if order.status in 'cancelled|returned' %}disabled{% endif %}>
+                                        <option value="pending"       {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                                        <option value="confirmed"     {% if order.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                        <option value="shipped"       {% if order.status == 'shipped' %}selected{% endif %}>Shipped</option>
+                                        <option value="delivered"     {% if order.status == 'delivered' %}selected{% endif %}>Delivered</option>
+                                        <option value="cancelled"     {% if order.status == 'cancelled' %}selected{% endif %} {% if order.status == 'cancelled' %}disabled{% endif %}>Cancelled</option>
+                                        <option value="return_requested" {% if order.status == 'return_requested' %}selected{% endif %} {% if order.status == 'return_requested' %}disabled{% endif %}>
+                                            Return Requested
+                                        </option>
+                                        <option value="returned"      {% if order.status == 'returned' %}selected{% endif %} {% if order.status == 'returned' %}disabled{% endif %}>
+                                            Returned
+                                        </option>
+                                    </select>
+                                </form>
+                            </td>
+
+                            <td>
+                                <div>{{ order.created_at|date:"d M Y" }}</div>
+                                <small class="text-muted">{{ order.created_at|time:"h:i A" }}</small>
+                            </td>
+
+                            <td class="fw-bold text-success">₹{{ order.total_amount|floatformat:2 }}</td>
+
+                            <td>
+                                {% if order.status == 'cancelled' and order.cancel_reason %}
+                                    <span class="text-danger small">{{ order.cancel_reason|truncatewords:8 }}</span>
+                                {% elif order.status == 'return_requested' %}
+                                    <span class="badge bg-warning text-dark">Return Requested</span>
+                                {% elif order.status == 'returned' %}
+                                    <span class="badge bg-dark text-white">Returned</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                <div class="btn-group-vertical btn-group-sm" role="group">
+
+                                    <!-- CORRECT: with admin_panel namespace -->
+                                <a href="{% url 'admin_order_detail' order.id %}" 
+                                class="btn btn-dark btn-sm mb-1" 
+                                target="_blank" 
+                                rel="noopener">
+                                    View Order
+                                </a>
+
+        <!-- Optional bonus: let admin see what user sees -->
+        <!-- <a href="/orders/{{ order.order_id }}/" 
+           class="btn btn-outline-info btn-sm mb-1" 
+           target="_blank" 
+           rel="noopener">
+            User View
+        </a> -->
+
+                                    {% if order.status == 'return_requested' %}
+                                        <a href="{% url 'approve_return' order.id %}" class="btn btn-success btn-sm">
+                                            Approve Return
+                                        </a>
+                                        <a href="{% url 'reject_return' order.id %}" class="btn btn-danger btn-sm">
+                                            Reject Return
+                                        </a>
+                                    {% elif order.status not in 'delivered|cancelled|returned|return_requested' %}
+                                        <button onclick="confirmCancel({{ order.id }})" class="btn btn-outline-danger btn-sm">
+                                            Cancel Order
+                                        </button>
+                                    {% endif %}
+
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <h5>No orders found.</h5>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="d-flex justify-content-center mt-4">
+        <nav>
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">Previous</a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <a class="page-link bg-dark border-dark">{{ page_obj.number }}</a>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<!-- Cancel Confirmation Script -->
+<script>
+function confirmCancel(orderId) {
+    if (confirm("Are you sure you want to cancel this order?")) {
+        const reason = prompt("Enter cancellation reason:");
+        if (reason && reason.trim() !== "") {
+            window.location.href = `/admin_panel/cancel_order/${orderId}/?reason=${encodeURIComponent(reason.trim())}`;
+        } else if (reason !== null) {
+            alert("Cancellation reason is required.");
+        }
+    }
+}
+</script>
+
+<!-- Custom Styles -->
+<style>
+    .status-select {
+        min-width: 140px;
+        font-weight: 600;
+        border: 2px solid #000;
+    }
+    .status-select option {
+        font-weight: normal;
+    }
+    .badge {
+        font-size: 0.8rem;
+    }
+    .btn-group-vertical .btn {
+        margin-bottom: 4px;
+    }
+    .table thead th {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+</style>
+
+{% endblock %}

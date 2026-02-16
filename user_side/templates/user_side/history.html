@@ -1,0 +1,41 @@
+{% extends "user_side/user_profilebase.html" %}
+{% block title %}Wallet History{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <h2>Transaction History</h2>
+
+    <!-- Add simple filter form later -->
+
+    {% if transactions %}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Order</th>
+                <th class="text-end">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tx in transactions %}
+            <tr>
+                <td>{{ tx.created_at|date:"d-m-Y H:i" }}</td>
+                <td>{{ tx.transaction_type|title }}</td>
+                <td>{{ tx.description }}</td>
+                <td>{% if tx.order %}#{{ tx.order.order_id }}{% endif %}</td>
+                <td class="text-end {% if tx.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if tx.amount > 0 %}+{% endif %}{{ tx.amount|floatformat:2 }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="alert alert-info">No transactions found.</div>
+    {% endif %}
+
+    <a href="{% url 'my_wallet' %}" class="btn btn-secondary mt-3">Back to Wallet</a>
+</div>
+{% endblock %}

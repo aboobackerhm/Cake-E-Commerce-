@@ -1,0 +1,48 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-danger">
+                <div class="card-header bg-danger text-white text-center">
+                    <h4 class="mb-0">Reject Return Request</h4>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <h5>Order ID: <strong>{{ order.order_id }}</strong></h5>
+                        <p class="text-muted">Customer: {{ order.user.username }}</p>
+                        <p class="text-muted">Requested on: {{ order.return_requested_at|date:"d M Y h:i A" }}</p>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <strong>Return Reason by Customer:</strong><br>
+                        "{{ order.return_reason|default:"No reason provided" }}"
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="rejection_reason" class="form-label fw-bold text-danger">
+                                Rejection Reason <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="rejection_reason" id="rejection_reason" class="form-control" rows="5"
+                                      placeholder="Explain why the return is being rejected..." required></textarea>
+                        </div>
+
+                        <div class="d-grid gap-3 d-md-flex justify-content-md-end">
+                            <a href="{% url 'manage_return_requests' %}" class="btn btn-secondary btn-lg px-5">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger btn-lg px-5">
+                                Reject Return
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

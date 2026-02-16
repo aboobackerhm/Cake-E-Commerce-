@@ -1,0 +1,120 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="text-center mb-5 text-white fw-bold" style="background:#000;padding:15px;border-radius:8px;">
+        Return Requests Management
+    </h2>
+
+    {% if messages %}
+        <div class="alert-container mx-auto mb-4" style="max-width:600px;">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'warning' %}alert-warning{% else %}alert-success{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="card shadow-sm" style="border: 1px solid #000; border-radius:10px;">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead style="background-color: #000; color: #fff;">
+                        <tr>
+                            <th>Order ID</th>
+                            <th>User</th>
+                            <th>Requested On</th>
+                            <th>Reason</th>
+                            <th>Total Amount</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in returns %}
+                        <tr>
+                            <td class="fw-bold">{{ order.order_id }}</td>
+                            <td>
+                                <div>{{ order.user.username }}</div>
+                                <small class="text-muted">{{ order.user.email }}</small>
+                            </td>
+                            <td>
+                                {{ order.return_requested_at|date:"d M Y" }}
+                                <br>
+                                <small class="text-muted">{{ order.return_requested_at|time:"h:i A" }}</small>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#reasonModal{{ order.id }}">
+                                    View Reason
+                                </button>
+                            </td>
+                            <td class="fw-bold text-success">₹{{ order.total_amount|floatformat:2 }}</td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'approve_return' order.id %}" class="btn btn-success btn-sm">
+                                        Approve
+                                    </a>
+                                    <a href="{% url 'reject_return' order.id %}" class="btn btn-danger btn-sm">
+                                        Reject
+                                    </a>
+                                </div>
+                                <br>
+                                <a href="{% url 'order_detail' order.id %}" class="btn btn-dark btn-sm mt-2">
+                                    View Order
+                                </a>
+                            </td>
+                        </tr>
+
+                        <!-- Modal for Return Reason -->
+                        <div class="modal fade" id="reasonModal{{ order.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-dark text-white">
+                                        <h5 class="modal-title">Return Reason – {{ order.order_id }}</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p class="lead">{{ order.return_reason|default:"No reason provided" }}</p>
+                                        <hr>
+                                        <small class="text-muted">
+                                            Requested by: <strong>{{ order.user.get_full_name|default:order.user.username }}</strong><br>
+                                            On: {{ order.return_requested_at|date:"d M Y h:i A" }}
+                                        </small>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <h5>No pending return requests</h5>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'order_management' %}" class="btn btn-dark btn-lg px-5">
+            Back to Orders
+        </a>
+    </div>
+</div>
+
+<style>
+    .btn-group .btn {
+        border-radius: 6px !important;
+    }
+    .modal-content {
+        border: 2px solid #000;
+    }
+</style>
+{% endblock %}

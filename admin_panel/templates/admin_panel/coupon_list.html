@@ -1,0 +1,176 @@
+{% extends 'admin_panel/base_admin.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Coupon Management</h2>
+
+    <!-- Display success/error messages -->
+    {% if messages %}
+        <div class="alert-container">
+            {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="mb-3">
+        <a href="{% url 'coupon_form' %}" class="btn btn-success">Add New Coupon</a>
+    </div>
+
+    <!-- Search Form -->
+    <form method="get" class="mb-3">
+        <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search by coupon code" value="{{ query }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{% url 'coupon_list' %}" class="btn btn-outline-secondary">Clear</a>
+        </div>
+    </form>
+
+    <!-- Coupon Table -->
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Code</th>
+                <th>Discount</th>
+                <th>Min. Purchase</th>
+                <th>Valid Until</th>
+                <th>Usage</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for coupon in page_obj %}
+                <tr>
+                    <td>{{ coupon.id }}</td>
+                    <td>{{ coupon.code }}</td>
+                    <td>
+                        {% if coupon.discount_percentage > 0 %}
+                            {{ coupon.discount_percentage }}% off
+                        {% elif coupon.discount_amount > 0 %}
+                            ₹{{ coupon.discount_amount|floatformat:2 }} off
+                        {% else %}
+                            —
+                        {% endif %}
+                        {% if coupon.max_discount_amount %}
+                            (max ₹{{ coupon.max_discount_amount|floatformat:2 }})
+                        {% endif %}
+                    </td>
+                    <td>₹{{ coupon.min_purchase_amount|floatformat:2 }}</td>
+                    <td>
+                        {% if coupon.valid_until %}
+                            {{ coupon.valid_until|date:"Y-m-d" }}
+                        {% else %}
+                            No expiry
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ coupon.used_count }} / 
+                        {% if coupon.usage_limit > 0 %}
+                            {{ coupon.usage_limit }}
+                        {% else %}
+                            ∞
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if coupon.active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'coupon_edit' coupon.id %}" class="btn btn-info btn-sm">Edit</a>
+                        
+                        <button onclick="confirmDelete({{ coupon.id }})" 
+                                class="btn btn-danger btn-sm">Delete</button>
+
+                        {% if coupon.active %}
+                            <button onclick="confirmAction('deactivate', {{ coupon.id }})" 
+                                    class="btn btn-warning btn-sm">
+                                Deactivate
+                            </button>
+                        {% else %}
+                            <button onclick="confirmAction('activate', {{ coupon.id }})" 
+                                    class="btn btn-success btn-sm">
+                                Activate
+                            </button>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center">No coupons found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <nav aria-label="Coupon pagination">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">Previous</a>
+                </li>
+            {% endif %}
+
+            {% for i in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+                    <a class="page-link" href="?page={{ i }}{% if query %}&q={{ query }}{% endif %}">{{ i }}</a>
+                </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">Next</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <!-- JavaScript for Confirmations -->
+    <script>
+        function confirmDelete(couponId) {
+            if (confirm('Are you sure you want to permanently delete this coupon?')) {
+                window.location.href = "{% url 'coupon_delete' coupon_id=0 %}".replace('0', couponId);
+            }
+        }
+
+        function confirmAction(action, couponId) {
+            let message = action === 'deactivate' 
+                ? 'Are you sure you want to deactivate this coupon?' 
+                : 'Are you sure you want to activate this coupon?';
+            
+            if (confirm(message)) {
+               window.location.href = "{% url 'coupon_status_toggle' coupon_id=0 action='placeholder' %}"
+                        .replace('0', couponId)
+                        .replace('placeholder', action);
+            }
+        }
+    </script>
+
+    <style>
+        .alert-container {
+            max-width: 700px;
+            margin: 0 auto 20px;
+        }
+        .table th, .table td {
+            vertical-align: middle;
+        }
+        .btn-sm {
+            padding: 5px 10px;
+            margin-right: 4px;
+        }
+        .badge {
+            font-size: 0.9em;
+        }
+    </style>
+</div>
+{% endblock %}

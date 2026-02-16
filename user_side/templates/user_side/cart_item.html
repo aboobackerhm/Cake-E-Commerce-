@@ -1,0 +1,59 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden transition-opacity"
+     id="cart-item-{{ item.id }}">
+
+  <div class="p-6 flex flex-col sm:flex-row gap-6">
+    <!-- Image -->
+    <img src="{{ item.variant.product.get_first_image|default:'/static/img/no-image.png' }}"
+         class="w-24 h-24 object-cover rounded-lg" alt="{{ item.variant.product.name }}">
+
+    <!-- Details -->
+    <div class="flex-1">
+      <h3 class="font-semibold text-lg">{{ item.variant.product.name }}</h3>
+      <p class="text-sm text-gray-600">Size: {{ item.variant.get_size_display }}</p>
+      {% if not item.is_valid %}
+        <p class="text-red-600 text-sm font-medium">
+          {% for reason in item.reason %}{{ reason }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </p>
+      {% else %}
+        <p class="text-sm">Stock: <strong class="{% if item.variant.stock > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+          {{ item.variant.stock }}
+        </strong></p>
+      {% endif %}
+    </div>
+
+    <!-- Price + Quantity + Total -->
+    <div class="flex flex-col items-end space-y-4">
+
+      <div class="text-xl font-bold text-indigo-700">**{{ item.variant.price|floatformat:2 }}</div>
+
+      <!-- Quantity Buttons -->
+      <div class="flex items-center border border-gray-300 rounded-lg">
+        <button type="button"
+                class="qty-btn w-10 h-10 hover:bg-red-50 text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-action="decrement"
+                data-id="{{ item.id }}"
+                {% if item.quantity <= 1 or not item.is_valid %}disabled{% endif %}>–</button>
+
+        <span id="qty-{{ item.id }}" class="w-16 text-center font-bold">{{ item.quantity }}</span>
+
+        <button type="button"
+                class="qty-btn w-10 h-10 hover:bg-green-50 text-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-action="increment"
+                data-id="{{ item.id }}"
+                {% if item.quantity >= item.variant.stock or not item.is_valid %}disabled{% endif %}>+</button>
+      </div>
+
+      <!-- Item Total -->
+      <div id="item-total-{{ item.id }}" class="font-bold text-lg">
+        ₹{{ item.total_price|floatformat:2 }}
+      </div>
+
+      <!-- Remove Button -->
+      <form method="post" action="{% url 'remove_from_cart' %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="item_id" value="{{ item.id }}">
+        <button type="submit" class="text-red-600 hover:underline text-sm">Remove</button>
+      </form>
+    </div>
+  </div>
+</div>

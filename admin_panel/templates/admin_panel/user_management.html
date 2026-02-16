@@ -1,0 +1,86 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    
+    <!-- Search form -->
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    <form method="get" class="mb-3">
+        <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search by username, email, or name" value="{{ query }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{% url 'user_management' %}" class="btn btn-outline-secondary">Clear</a>
+        </div>
+    </form>
+    
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Joined</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in page_obj %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.date_joined }}</td>
+                <td>{% if user.is_active %}Active{% else %}Blocked{% endif %}</td>
+                <td>
+                    {% if user.is_active %}
+                    <button onclick="confirmAction('block', {{ user.id }})" class="btn btn-warning btn-sm">Block</button>
+                    {% else %}
+                    <button onclick="confirmAction('unblock', {{ user.id }})" class="btn btn-success btn-sm">Unblock</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted">No users found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Pagination -->
+    <nav>
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">Previous</a></li>
+            {% endif %}
+            {% for i in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+                <a class="page-link" href="?page={{ i }}{% if query %}&q={{ query }}{% endif %}">{{ i }}</a>
+            </li>
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+<!-- Confirmation JS -->
+<script>
+    function confirmAction(action, userId) {
+        if (confirm(`Are you sure you want to ${action} this user?`)) {
+            window.location.href = `/admin_panel/${action}-user/${userId}/`;
+        }
+    }
+</script>
+{% endblock %}
