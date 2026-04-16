@@ -1,0 +1,44 @@
+{% extends 'admin_panel/base_admin.html' %}
+
+<!-- Change this if your base template has a different name/path -->
+
+{% block title %}Confirm Coupon Delete{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Confirm Deletion</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">
+                        Are you sure you want to delete the coupon 
+                        <strong>"{{ object.code }}"</strong>?
+                    </p>
+                    
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This action cannot be undone. 
+                        All data related to this coupon will be permanently removed.
+                    </div>
+
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-lg px-4">
+                            <i class="fas fa-trash"></i> Yes, Delete Coupon
+                        </button>
+                    </form>
+
+                    <a href="{% url back_url %}" class="btn btn-secondary btn-lg px-4 ms-3">
+                        Cancel
+                    </a>
+                </div>
+                <div class="card-footer text-muted">
+                    Coupon ID: #{{ object.id }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

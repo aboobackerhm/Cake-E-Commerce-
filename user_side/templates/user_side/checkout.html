@@ -5,22 +5,36 @@
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-8">
+  <!-- SweetAlert2 CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-10 text-center md:text-left">Checkout</h1>
 
-    <!-- Messages -->
-    {% if messages %}
-      <div class="mb-8 space-y-4">
-        {% for message in messages %}
-          <div class="rounded-xl p-5 shadow-sm border 
-            {% if message.tags == 'success' %}bg-green-50 text-green-800 border-green-200
-            {% elif message.tags == 'error' %}bg-red-50 text-red-800 border-red-200
-            {% else %}bg-blue-50 text-blue-800 border-blue-200{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
+    <!-- SweetAlert2 Messages -->
+{% if messages %}
+  {% for message in messages %}
+    <script>
+      Swal.fire({
+        icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
+        title: '{{ message.tags|capfirst|default:"Message" }}',
+        text: '{{ message|escapejs }}',
+        confirmButtonColor: '{% if message.tags == "success" %}#10b981{% elif message.tags == "error" %}#ef4444{% else %}#3b82f6{% endif %}',
+        timer: 4000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        position: 'top-end',
+        background: '{% if message.tags == "success" %}#f0fdf4{% elif message.tags == "error" %}#fef2f2{% elif message.tags == "warning" %}#fffbeb{% else %}#f8fafc{% endif %}',
+        color: '{% if message.tags == "success" %}#166534{% elif message.tags == "error" %}#991b1b{% elif message.tags == "warning" %}#92400e{% else %}#1e2937{% endif %}',
+        iconColor: '{% if message.tags == "success" %}#22c55e{% elif message.tags == "error" %}#ef4444{% elif message.tags == "warning" %}#f59e0b{% else %}#3b82f6{% endif %}',
+        toast: true,           // Makes it a non-blocking toast (recommended)
+        customClass: {
+          popup: 'swal-toast-custom'
+        }
+      });
+    </script>
+  {% endfor %}
+{% endif %}
 
     <!-- Main Checkout Form -->
     <form method="post" class="grid lg:grid-cols-3 gap-8">
@@ -159,6 +173,7 @@
     </form>
 
     <!-- Coupon Section (Separate Form) -->
+        <!-- Coupon Section -->
     <div class="bg-white rounded-2xl shadow-md p-6 md:p-8 mt-8">
       <h2 class="text-2xl font-bold text-gray-900 mb-6">Have a Coupon?</h2>
 
@@ -186,25 +201,27 @@
         {% endif %}
       </form>
 
+      <!-- Fixed Coupon Message with SweetAlert -->
       {% if coupon_message %}
-        <p class="mt-4 text-sm {% if coupon_message.success %}text-green-600{% else %}text-red-600{% endif %}">
-          {{ coupon_message.text }}
-        </p>
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+              icon: {% if coupon_message.success %}'success'{% else %}'error'{% endif %},
+              title: {% if coupon_message.success %}'Success'{% else %}'Error'{% endif %},
+              text: '{{ coupon_message.text|escapejs }}',
+              timer: 5000,
+              timerProgressBar: true,
+              showConfirmButton: false,
+              toast: true,
+              position: 'top-end',
+              background: {% if coupon_message.success %}'#f0fdf4'{% else %}'#fef2f2'{% endif %},
+              color: {% if coupon_message.success %}'#166534'{% else %}'#991b1b'{% endif %},
+              iconColor: {% if coupon_message.success %}'#22c55e'{% else %}'#ef4444'{% endif %}
+            });
+          });
+        </script>
       {% endif %}
     </div>
-{% if can_use_wallet %}
-<div class="wallet-option mt-4 p-4 bg-gray-50 rounded-lg border">
-    <label class="flex items-center cursor-pointer">
-        <input type="checkbox" id="use_wallet" name="use_wallet" value="1" class="mr-3 h-5 w-5">
-        <span>Use Wallet Balance: <strong>₹{{ wallet_balance|floatformat:2 }}</strong></span>
-    </label>
-    
-    <p id="wallet-usage" class="mt-3 text-sm text-green-700 hidden">
-        Using <span id="wallet-amount">₹0.00</span> from wallet • 
-        Remaining to pay: ₹<span id="remaining-pay">0.00</span>
-    </p>
-</div>
-{% endif %}
   </div>
 </div>
 
@@ -431,5 +448,12 @@ document.addEventListener('keydown', function(e) {
     });
   }
 });
+
 </script>
+<style>
+  .swal-toast-custom {
+    margin-top: 15px;
+    margin-right: 15px;
+  }
+</style>
 {% endblock %}

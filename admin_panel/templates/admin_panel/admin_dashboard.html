@@ -1,27 +1,230 @@
 {% extends 'admin_panel/base_admin.html' %}
-{% block title %}Admin Dashboard{% endblock %}
+{% load static %}
+
+{% block title %}Admin Dashboard - Sales Analytics{% endblock %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #0d6efd, #6610f2);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0 0 15px 15px;
+    }
+    .stat-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+    }
+    .chart-container {
+        position: relative;
+        height: 380px;
+    }
+    .top-card {
+        height: 100%;
+    }
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .revenue-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #0d6efd;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <h2 class="text-center mb-4">Admin Dashboard</h2>
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Manage Products</h5>
-                    <p class="card-text">View, edit, or delete products and their variants.</p>
-                    <a href="{% url 'product_management' %}" class="btn btn-primary">Go to Products</a>
-                </div>
-            </div>
+<div class="container-fluid">
+
+    <!-- Header -->
+    <div class="dashboard-header text-center">
+        <div class="container">
+            <h1 class="display-5 fw-bold mb-1">Sales Analytics Dashboard</h1>
+            <p class="lead mb-0">Real-time overview of your cake store performance</p>
         </div>
-        <div class="col-md-6">
-            <div class="card">
+    </div>
+
+    <!-- Filters -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-lg-8">
+            <form method="get" class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="card-title">Add New Product</h5>
-                    <p class="card-text">Create a new product with variants and images.</p>
-                    <a href="{% url 'add_product' %}" class="btn btn-primary">Add Product</a>
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Period</label>
+                            <select name="period" class="form-select form-select-lg" onchange="this.form.submit()">
+                                <option value="yearly" {% if period == 'yearly' %}selected{% endif %}>Yearly</option>
+                                <option value="monthly" {% if period == 'monthly' %}selected{% endif %}>Monthly</option>
+                                <option value="weekly" {% if period == 'weekly' %}selected{% endif %}>Weekly</option>
+                                <option value="daily" {% if period == 'daily' %}selected{% endif %}>Daily</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Year</label>
+                            <select name="year" class="form-select form-select-lg" onchange="this.form.submit()">
+                                {% for y in years %}
+                                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button type="submit" class="btn btn-primary btn-lg px-5">
+                                <i class="bi bi-arrow-repeat"></i> Apply Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sales Revenue Chart -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up-arrow text-primary me-2"></i>
+                        Revenue Trend ({{ period|title }})
+                    </h5>
+                    <span class="badge bg-primary fs-6">₹ Total Revenue</span>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="salesChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <div class="row g-4">
+
+        <!-- Top 10 Best Selling Products -->
+        <div class="col-lg-4">
+            <div class="card shadow h-100 top-card">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 text-success">
+                        <i class="bi bi-box-seam me-2"></i> Best Selling Products
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-end">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for p in top_products %}
+                            <tr>
+                                <td class="fw-medium">{{ p.variant__product__name|default:"Unknown Product" }}</td>
+                                <td class="text-center">{{ p.total_qty }}</td>
+                                <td class="text-end text-success fw-semibold">₹{{ p.total_revenue|floatformat:2 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center py-5 text-muted">No sales data available yet</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Best Selling Categories -->
+        <div class="col-lg-4">
+            <div class="card shadow h-100 top-card">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 text-info">
+                        <i class="bi bi-tags me-2"></i> Top Categories
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">Qty Sold</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for c in top_categories %}
+                            <tr>
+                                <td class="fw-medium">{{ c.variant__product__category__name|default:"Uncategorized" }}</td>
+                                <td class="text-end fw-semibold">{{ c.total_qty }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center py-5 text-muted">No data yet</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Optional Ledger Button -->
+    <div class="mt-5 text-center">
+        <a href="{#}" 
+           class="btn btn-success btn-lg px-5 py-3 shadow">
+            <i class="bi bi-file-earmark-text me-2"></i> Generate Ledger Book
+        </a>
+    </div>
+
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('salesChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ labels|safe }},
+            datasets: [{
+                label: 'Revenue (₹)',
+                data: {{ revenue|safe }},
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.15)',
+                borderWidth: 3,
+                tension: 0.4,
+                pointRadius: 5,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#f0f0f0' }
+                },
+                x: {
+                    grid: { color: '#f0f0f0' }
+                }
+            }
+        }
+    });
+</script>
 {% endblock %}

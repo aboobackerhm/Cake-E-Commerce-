@@ -1,4 +1,4 @@
-from django.urls import path,include
+from django.urls import path
 from . import views
 urlpatterns = [
     path('dashboard/',views.user_dashboard,name='user_dashboard'),
@@ -13,23 +13,14 @@ urlpatterns = [
     path('reset-password/', views.ResetPassword, name='reset_password'),
     path('products/', views.product_list, name='product_list'),
     path('product-details/<slug:slug>/',views.product_details,name='product_details'),
-    # path('user_profile/',views.user_profile,name='user_profile'),
-    # path('user_editprofile/',views.user_editprofile,name='user_editprofile'),
     path('cart/', views.cart_detail, name='cart_detail'),
     path('cart/increment/<int:item_id>/', views.increment_quantity, name='increment_quantity'),
     path('cart/decrement/<int:item_id>/', views.decrement_quantity, name='decrement_quantity'),
     path('cart-remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
-    # path('cart/', views.cart_view, name='cart_view'),
-    # path('cart/inc/<int:item_id>/', views.increment_quantity, name='increment_quantity'),
-    # path('cart/dec/<int:item_id>/', views.decrement_quantity, name='decrement_quantity'),
     path('cart-add/', views.add_to_cart, name='add_to_cart'),
-    #path('update-cart-quantity/', views.update_cart_quantity, name='update_cart_quantity'),
     path('cart-remove/', views.remove_from_cart, name='remove_from_cart'),
     path('checkout/', views.checkout, name='checkout'),
     path('order/success/<str:order_id>/', views.order_success, name='order_success'),
-    # path('address/add/',views.add_address, name='add_address'),
-    # path('address/edit/<int:pk>/', views.edit_address, name='edit_address'),
-    # path('cart/validate/', views.validate_cart_stock, name='validate_cart_stock'),
     path('cart-remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('orders/',views.order_list, name='order_list'),
     path('orders-<str:order_id>/', views.order_detail, name='order_detail'),
@@ -42,7 +33,6 @@ urlpatterns = [
     path('profile-detail/', views.profile_detail, name='profile_detail'),
     path('profile-edit/', views.profile_edit, name='profile_edit'),
     path('password-change/', views.password_change, name='password_change'),
-    #path('password/reset/', views.password_reset, name='password_reset'),
     path('email-verify-<str:uidb64>-<str:token>/', views.email_verify, name='email_verify'),
     path('address/', views.address, name='address'),
     path('create-razorpay-order/',views.create_razorpay_order,name='create_razorpay_order'),
@@ -55,4 +45,7 @@ urlpatterns = [
     path('my-wallet/',views.my_wallet,name='my_wallet'),
     path('wallet-history/',views.wallet_history,name='wallet_history'),
     path('all_coupons',views.all_coupons,name='all_coupons'),
+    path('wishlist/remove/<int:product_id>',views.remove_from_wishlist,name='remove_from_wishlist'),
+    path('my-referrals/', views.my_referrals, name='my_referrals'),
+    path('apply-referral/', views.apply_referral, name='apply_referral'),
 ]

@@ -136,7 +136,8 @@
                     class="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-black py-2 rounded-lg font-medium text-xs hover:from-orange-600 hover:to-orange-700 transition shadow-sm hover:shadow">
               Move to Cart
             </button>
-
+           
+              <div id="wishlist-item-{{ item.id }}" class="item-container">
             <button type="button"
                     onclick="removeFromWishlist(event, '{{ item.product.id }}', '{{ item.id }}')"
                     class="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition border border-red-200 text-xs font-medium">
@@ -144,6 +145,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
+            </div>
+            
           </div>
         </form>
       </div>
@@ -175,57 +178,85 @@
 
 <!-- JavaScript for Remove + Quantity Buttons -->
 <script>
-function removeFromWishlist(event, productId, itemId) {
-  event.preventDefault();
-  if (!confirm("Remove this item from wishlist?")) return;
-
-  const card = document.getElementById(`wishlist-item-${itemId}`);
-  if (!card) return;
-
-  card.style.opacity = '0.5';
-  card.style.transform = 'translateY(10px)';
-
-  fetch(`{% url 'toggle_wishlist' 0 %}`.replace('0', productId), {
-    method: 'POST',
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest',
-      'X-CSRFToken': '{{ csrf_token }}'
-    },
-    body: new FormData()
-  })
-  .then(r => {
-    if (r.ok) {
-      card.style.transition = 'all 0.4s ease';
-      card.style.opacity = '0';
-      setTimeout(() => card.remove(), 400);
-
-      // If empty, reload to show empty state
-      if (document.querySelectorAll('[id^="wishlist-item-"]').length <= 1) {
-        setTimeout(() => location.reload(), 500);
-      }
-    } else {
-      card.style.opacity = '1';
-      card.style.transform = 'none';
-      alert("Couldn't remove item. Try again.");
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+        document.cookie.split(";").forEach(function(cookie) {
+            cookie = cookie.trim();
+            if (cookie.startsWith(name + "=")) {
+                cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+            }
+        });
     }
-  })
-  .catch(() => {
-    card.style.opacity = '1';
-    card.style.transform = 'none';
-    alert("Something went wrong.");
-  });
+    return cookieValue;
 }
 
-// Enable/disable move to cart button based on quantity & variant
+function removeFromWishlist(event, productId, itemId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // 1. Find the parent card
+    const card = document.getElementById("wishlist-item-" + itemId);
+    
+    if (!card) {
+        console.error("Critical: Could not find HTML element with ID: wishlist-item-" + itemId);
+        alert("Developer Error: The parent div is missing id='wishlist-item-" + itemId + "'");
+        return;
+    }
+
+    if (!confirm("Remove this item?")) return;
+
+    // 2. UI Feedback
+    card.style.opacity = "0.5";
+    card.style.pointerEvents = "none";
+
+    const csrfToken = getCookie("csrftoken");
+    const url = "{% url 'remove_from_wishlist' 9999999 %}".replace("9999999", productId);
+
+    fetch(url, {
+        method: "POST",
+        headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": csrfToken,
+        },
+        body: new FormData()
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 3. Smooth Removal (Solves the "Manual Reload" problem)
+            card.style.transition = "all 0.4s ease";
+            card.style.opacity = "0";
+            card.style.transform = "translateX(50px)";
+            
+            setTimeout(() => {
+                card.remove();
+                // If no items left, reload to show "Empty Wishlist" state
+                if (document.querySelectorAll('[id^="wishlist-item-"]').length === 0) {
+                    location.reload();
+                }
+            }, 400);
+        } else {
+            alert(data.message || "Error removing item");
+            card.style.opacity = "1";
+            card.style.pointerEvents = "auto";
+        }
+    })
+    .catch(err => {
+        console.error("Fetch Error:", err);
+        card.style.opacity = "1";
+        card.style.pointerEvents = "auto";
+    });
+}
 function updateCartButton(input) {
-  const form = input.closest('form');
-  const submitBtn = form.querySelector('button[type="submit"]');
-  const variantSelect = form.querySelector('select[name="variant_id"]');
-  
-  const isValid = variantSelect.value && input.value >= 1 && input.value <= 5;
-  submitBtn.disabled = !isValid;
-  submitBtn.style.opacity = isValid ? '1' : '0.6';
-  submitBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+    const form = input.closest('form');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const variantSelect = form.querySelector('select[name="variant_id"]');
+
+    const isValid = variantSelect.value && input.value >= 1 && input.value <= 5;
+    submitBtn.disabled = !isValid;
+    submitBtn.style.opacity = isValid ? '1' : '0.6';
+    submitBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
 }
 </script>
 {% endblock %}

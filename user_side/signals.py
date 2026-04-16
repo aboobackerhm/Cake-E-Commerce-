@@ -1,6 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from admin_panel.models import Order, Wallet, WalletTransaction  # adjust imports
+from admin_panel.models import Order, Wallet, WalletTransaction ,ReferralCode
+from django.contrib.auth import get_user_model
 
 @receiver(post_save, sender=Order)
 def handle_order_refund(sender, instance, created, **kwargs):
@@ -31,3 +32,11 @@ def handle_order_refund(sender, instance, created, **kwargs):
             )
             instance.refunded_amount = instance.paid_amount
             instance.save(update_fields=['refunded_amount'])
+
+
+User = get_user_model()
+
+@receiver(post_save, sender=User)
+def create_referral_code(sender, instance, created, **kwargs):
+    if created:
+        ReferralCode.objects.create(user=instance)

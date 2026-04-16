@@ -2,11 +2,39 @@
 {% block title %}Select Payment Method - MR CAKE{% endblock %}
 
 {% block content %}
+
+<!-- SweetAlert2 CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
 <div class="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
   <div class="max-w-5xl mx-auto">
     <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-10 text-center md:text-left">
       Select Payment Method
     </h1>
+
+    <!-- Django Messages → SweetAlert -->
+    {% if messages %}
+      {% for message in messages %}
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+              icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
+              title: '{{ message.tags|capfirst|default:"Notification" }}',
+              text: '{{ message|escapejs }}',
+              timer: 5000,
+              timerProgressBar: true,
+              showConfirmButton: false,
+              toast: true,
+              position: 'top-end',
+              background: '{% if message.tags == "success" %}#f0fdf4{% elif message.tags == "error" %}#fef2f2{% else %}#f8fafc{% endif %}',
+              color: '{% if message.tags == "success" %}#166534{% elif message.tags == "error" %}#991b1b{% else %}#1e2937{% endif %}',
+              iconColor: '{% if message.tags == "success" %}#22c55e{% elif message.tags == "error" %}#ef4444{% else %}#3b82f6{% endif %}'
+            });
+          });
+        </script>
+      {% endfor %}
+    {% endif %}
 
     <div class="grid md:grid-cols-3 gap-8">
       <!-- Left: Address + Payment Options -->
@@ -39,10 +67,9 @@
             <!-- Hidden field for final selected method -->
             <input type="hidden" name="payment_method" id="selectedPayment" value="cod">
 
-            <!-- COD -->
-            <label class="flex items-center p-5 border-2 rounded-xl mb-5 cursor-pointer transition-all
-                          border-orange-500 bg-orange-50/70 hover:bg-orange-50">
-              <input type="radio" name="temp_payment" value="cod" class="mr-4 h-5 w-5 text-orange-600" checked 
+            <!-- 1. Cash on Delivery -->
+            <label class="flex items-center p-5 border-2 rounded-xl mb-4 cursor-pointer transition-all border-orange-500 bg-orange-50/70 hover:bg-orange-50">
+              <input type="radio" name="temp_payment" value="cod" class="mr-4 h-5 w-5 text-orange-600" checked
                      onchange="document.getElementById('selectedPayment').value = 'cod';">
               <div class="flex-1">
                 <p class="font-semibold text-lg">Cash on Delivery (COD)</p>
@@ -51,20 +78,41 @@
               <span class="text-green-600 font-bold text-sm">Available</span>
             </label>
 
-            <!-- Online Payment (Razorpay) -->
+            <!-- 2. Pay with Site Wallet -->
+            {% if wallet_balance > 0 %}
+            <label class="flex items-center p-5 border rounded-xl mb-4 cursor-pointer transition-all hover:bg-gray-50 {% if wallet_balance >= grand_total %}border-emerald-500 bg-emerald-50/70{% endif %}">
+              <input type="radio" name="temp_payment" value="wallet" class="mr-4 h-5 w-5 text-orange-600"
+                     onchange="document.getElementById('selectedPayment').value = 'wallet';"
+                     {% if wallet_balance < grand_total %}disabled{% endif %}>
+              <div class="flex-1">
+                <p class="font-semibold text-lg">Pay with Wallet</p>
+                <p class="text-sm text-gray-600 mt-1">
+                  Available Balance: <span class="font-medium text-emerald-600">₹{{ wallet_balance|floatformat:2 }}</span>
+                </p>
+                {% if wallet_balance < grand_total %}
+                <p class="text-xs text-red-600 mt-1">Insufficient balance</p>
+                {% endif %}
+              </div>
+              <span class="text-emerald-600 font-medium text-sm">Fast</span>
+            </label>
+            {% endif %}
+
+            <!-- 3. Pay Online via Razorpay -->
             <label class="flex items-center p-5 border rounded-xl cursor-pointer transition-all hover:bg-gray-50">
               <input type="radio" name="temp_payment" value="razorpay" class="mr-4 h-5 w-5 text-orange-600"
                      onchange="document.getElementById('selectedPayment').value = 'razorpay';">
               <div class="flex-1">
                 <p class="font-semibold text-lg">Pay Online Now</p>
-                <p class="text-sm text-gray-600 mt-1">Secure payment with UPI, Cards, Netbanking, Wallets</p>
+                <p class="text-sm text-gray-600 mt-1">
+                  UPI, Cards, Netbanking &amp; Wallets (Amazon Pay, PhonePe, Paytm, Mobikwik, etc.)
+                </p>
               </div>
               <span class="text-blue-600 font-medium text-sm">Recommended</span>
             </label>
 
             <!-- Final Place Order Button -->
             <button type="submit" id="payBtn" 
-                    class="w-full mt-10 bg-gradient-to-r from-orange-600 to-orange-700 text-black font-bold py-5 rounded-xl text-xl shadow-lg hover:from-orange-700 hover:to-orange-800 transition-all transform hover:scale-[1.02]">
+                    class="w-full mt-10 bg-gradient-to-r from-orange-600 to-orange-700 text-white font-bold py-5 rounded-xl text-xl shadow-lg hover:from-orange-700 hover:to-orange-800 transition-all transform hover:scale-[1.02]">
               Place Order • ₹{{ grand_total|floatformat:2 }}
             </button>
           </form>
@@ -114,7 +162,6 @@
   </div>
 </div>
 
-<!-- Razorpay SDK -->
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
@@ -122,50 +169,58 @@ document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("paymentForm");
   const payBtn = document.getElementById("payBtn");
 
+  function resetButton() {
+    payBtn.disabled = false;
+    payBtn.innerHTML = `Place Order • ₹{{ grand_total|floatformat:2 }}`;
+  }
+
+  function showSweetAlert(icon, title, text) {
+    Swal.fire({
+      icon: icon,
+      title: title,
+      text: text,
+      timer: 5000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      toast: true,
+      position: 'top-end'
+    });
+  }
+
   form.addEventListener("submit", function (e) {
     const selectedMethod = document.getElementById("selectedPayment").value;
 
     if (!selectedMethod) {
-      alert("Please select a payment method");
+      showSweetAlert('error', 'Error', 'Please select a payment method');
       e.preventDefault();
       return;
     }
 
-    if (selectedMethod === "cod") {
-      // Normal form submit for COD
-      return; // Let form submit normally to /place-order-final/
+    if (selectedMethod === "cod" || selectedMethod === "wallet") {
+      return; // normal form submit
     }
 
-    // ────────────────────────────────────────────────
-    // Razorpay flow
-    // ────────────────────────────────────────────────
+    // Razorpay Payment Flow
     e.preventDefault();
+
     payBtn.disabled = true;
-    payBtn.innerHTML = '<span class="animate-pulse">Processing...</span>';
-
-    // Prepare cart items from the order summary context
-    const cartItems = [
-      {% for item in cart_items %}
-      {
-        "variant_id": {{ item.variant.id }},
-        "quantity": {{ item.quantity }},
-        "price": {{ item.discounted_unit_price|floatformat:"2"|default:item.original_unit_price|floatformat:"2" }},
-        "name": "{{ item.variant.product.name|escapejs }}",
-        "size": "{{ item.variant.get_size_display|escapejs|default:'' }}"
-      }{% if not forloop.last %},{% endif %}
-      {% endfor %}
-    ];
-
-    // Debug: check what we're sending (open browser console F12)
-    console.log("Sending cart_items to backend:", cartItems);
+    payBtn.innerHTML = '<span class="animate-pulse">Creating order...</span>';
 
     const orderData = {
-      amount: {{ total|floatformat:"2" }},
-      discount: {{ discount|floatformat:"2"|default:"0" }},
-      tax: {{ tax|floatformat:"2"|default:"0" }},
-      shipping: {{ shipping|floatformat:"2"|default:"0" }},
+      amount: {{ grand_total }},
+      discount: {{ discount|default:0 }},
+      tax: {{ tax|default:0 }},
+      shipping: {{ shipping|default:0 }},
       address_id: "{{ address.id }}",
-      cart_items: cartItems   // ← This was the missing piece!
+      cart_items: [
+        {% for item in cart_items %}
+        {
+          "variant_id": {{ item.variant.id }},
+          "quantity": {{ item.quantity }},
+          "price": {{ item.discounted_unit_price|floatformat:"2" }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+      ]
     };
 
     fetch("/create-razorpay-order/", {
@@ -176,84 +231,88 @@ document.addEventListener("DOMContentLoaded", function () {
       },
       body: JSON.stringify(orderData)
     })
-      .then(response => {
-        console.log("Order creation status:", response.status);
-        if (!response.ok) {
-          throw new Error(`Server responded with ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log("Razorpay order created:", data);
+    .then(response => response.json())
+    .then(data => {
+      if (!data.status || !data.order_id) {
+        throw new Error(data.error || "Failed to create Razorpay order");
+      }
 
-        if (!data.status || !data.order_id) {
-          throw new Error(data.error || "Failed to create order");
-        }
-
-        const options = {
-          key: "{{ RAZORPAY_KEY_ID }}",
-          amount: data.amount,
-          currency: data.currency || "INR",
-          name: "MR CAKE",
-          description: "Cake Order Payment",
-          order_id: data.order_id,
-          handler: function (response) {
-            // Payment successful → verify signature
-            fetch("/verify-razorpay-payment/", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": "{{ csrf_token }}"
-              },
-              body: JSON.stringify({
-                razorpay_order_id: data.order_id,           // use the created order id
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
-              })
+      const options = {
+        key: data.key,
+        amount: data.amount,
+        currency: data.currency || "INR",
+        name: "MR CAKE",
+        description: "Order Payment",
+        order_id: data.order_id,
+        callback_url: "/razorpay/callback/",
+        handler: function (response) {
+          fetch("/verify-razorpay-payment/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
             })
-              .then(r => r.json())
-              .then(result => {
-                if (result.success) {
-                  window.location.href = `/order/success/${result.order_id || 'new'}/`;
-                } else {
-                  alert("Payment verification failed: " + (result.message || "Unknown error"));
-                  payBtn.disabled = false;
-                  payBtn.innerHTML = `Place Order • ₹{{ total|floatformat:2 }}`;
-                }
-              })
-              .catch(err => {
-                console.error("Verification error:", err);
-                alert("Something went wrong during verification.");
-                payBtn.disabled = false;
-                payBtn.innerHTML = `Place Order • ₹{{ total|floatformat:2 }}`;
-              });
-          },
-          prefill: {
-            name: "{{ request.user.get_full_name|default:request.user.username|escapejs }}",
-            email: "{{ request.user.email|escapejs }}",
-            contact: "{{ address.phone|default:''|escapejs }}"
-          },
-          theme: {
-            color: "#f97316"
-          },
-          modal: {
-            ondismiss: function () {
-              payBtn.disabled = false;
-              payBtn.innerHTML = `Place Order • ₹{{ total|floatformat:2 }}`;
+          })
+          .then(r => r.json())
+          .then(result => {
+            if (result.success) {
+              window.location.href = `/order/success/${result.order_id}/`;
+            } else {
+              showSweetAlert('error', 'Verification Failed', result.message || "Please contact support");
+              resetButton();
             }
-          }
-        };
+          })
+          .catch(() => {
+            showSweetAlert('error', 'Error', "Verification request failed. Please check My Orders.");
+            resetButton();
+          });
+        },
 
-        const rzp = new Razorpay(options);
-        rzp.open();
-      })
-      .catch(err => {
-        console.error("Payment initiation failed:", err);
-        alert("Failed to start payment: " + (err.message || "Unknown error"));
-        payBtn.disabled = false;
-        payBtn.innerHTML = `Place Order • ₹{{ total|floatformat:2 }}`;
+        prefill: {
+          name: "{{ request.user.get_full_name|default:request.user.username|escapejs }}",
+          email: "{{ request.user.email|escapejs }}",
+          contact: "{{ address.phone|default:''|escapejs }}"
+        },
+
+        theme: { color: "#f97316" },
+
+        modal: {
+          ondismiss: function() {
+            resetButton();
+          }
+        }
+      };
+
+      const rzp = new Razorpay(options);
+
+      rzp.on('payment.failed', function (response) {
+        console.error("Payment Failed:", response.error);
+        const msg = response.error.description || "Payment failed. Please try again.";
+        showSweetAlert('error', 'Payment Failed', msg);
+        resetButton();
       });
+
+      rzp.open();
+    })
+    .catch(err => {
+      console.error(err);
+      showSweetAlert('error', 'Failed', err.message || "Failed to start payment. Please try again.");
+      resetButton();
+    });
   });
 });
 </script>
+
+<style>
+  .swal-toast-custom {
+    margin-top: 15px;
+    margin-right: 15px;
+  }
+</style>
+
 {% endblock %}

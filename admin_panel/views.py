@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.views.generic import View
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Q,Max
+from django.db.models import Q,Max,F,Sum,Count
 from .models import Category, Coupon
 from django.shortcuts import get_object_or_404
 from .models import Product,ProductImage,ProductVariant,CustomUser,Order,OrderItem,ProductOffer,CategoryOffer,Wallet,WalletTransaction
@@ -21,6 +21,9 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ValidationError
 from decimal import Decimal, InvalidOperation
 from django.views.decorators.http import require_http_methods  
+from django.utils.dateparse import parse_date, parse_datetime  
+from datetime import datetime, timedelta
+from django.db.models.functions import TruncMonth, TruncYear, ExtractMonth, ExtractYear,TruncWeek,TruncDay
 # Create your views here.
 
 class AdminLoginView(View):
@@ -38,17 +41,90 @@ class AdminLoginView(View):
         else:
             messages.error(request,'Invalied credentials or not an admin')
             return render(request,'admin_panel/login.html')
-@never_cache 
+@never_cache
 @login_required
 def admin_logout(request):
     logout(request)
     return redirect('admin_login')
 @never_cache
 @login_required
+@staff_member_required
 def admin_dashboard(request):
-    if not request.user.is_superuser:
-        return redirect('admin_login')
-    return render(request,'admin_panel/admin_dashboard.html')
+    period = request.GET.get('period', 'monthly')
+    year = int(request.GET.get('year', datetime.now().year))
+
+    # Base orders for the selected year
+    orders = Order.objects.filter(created_at__year=year)
+
+    # Annotate period for chart
+    if period == 'yearly':
+        annotated_orders = orders.annotate(period=TruncYear('created_at'))
+    elif period == 'monthly':
+        annotated_orders = orders.annotate(period=TruncMonth('created_at'))
+    elif period == 'weekly':
+        annotated_orders = orders.annotate(period=TruncWeek('created_at'))
+    elif period == 'daily':
+        annotated_orders = orders.annotate(period=TruncDay('created_at'))
+    else:
+        annotated_orders = orders.annotate(period=TruncMonth('created_at'))
+
+    # ==================== Sales Chart Data ====================
+    sales_data = annotated_orders.values('period').annotate(
+        revenue=Sum('total_amount')
+    ).order_by('period')
+
+    labels = []
+    revenue = []
+    for item in sales_data:
+        p = item['period']
+        if p is None:
+            continue
+        if period == 'monthly':
+            labels.append(p.strftime('%b %Y'))
+        elif period == 'daily':
+            labels.append(p.strftime('%d %b'))
+        elif period == 'weekly':
+            labels.append(f"Week {p.strftime('%V')}, {p.year}")
+        else:
+            labels.append(str(p.year))
+        revenue.append(float(item['revenue'] or 0))
+
+    # Get order IDs for efficient filtering
+    order_ids = list(annotated_orders.values_list('id', flat=True))
+
+    # ==================== Top 10 Best Selling Products ====================
+    top_products = OrderItem.objects.filter(order_id__in=order_ids).values(
+        'variant__product__name',      # This is the correct path
+        'variant__product_id'
+    ).annotate(
+        total_qty=Sum('quantity'),
+        total_revenue=Sum(F('quantity') * F('price'))
+    ).order_by('-total_qty')[:10]
+
+    # ==================== Top 10 Categories ====================
+    top_categories = OrderItem.objects.filter(order_id__in=order_ids).values(
+        'variant__product__category__name'
+    ).annotate(
+        total_qty=Sum('quantity')
+    ).order_by('-total_qty')[:10]
+
+    # ==================== Top 10 Brands ====================
+    # If you have Brand model and variant__product__brand, use it.
+    # For now assuming you may not have Brand yet - we'll show Product name as fallback or skip if no brand
+    top_brands = []   # Change this later if you add Brand
+
+    context = {
+        'period': period,
+        'year': year,
+        'years': range(2020, datetime.now().year + 2),
+        'labels': labels,
+        'revenue': revenue,
+        'top_products': top_products,
+        'top_categories': top_categories,
+        'top_brands': top_brands,
+    }
+
+    return render(request, 'admin_panel/admin_dashboard.html', context)
 @never_cache
 @login_required
 def user_management(request):
@@ -615,23 +691,10 @@ def order_list(request):
             models.Q(address__phone__icontains=q)
         )
 
-    # Filters
-    # if request.GET.get('status'):
-    #     qs = qs.filter(status=request.GET['status'])
-    # if request.GET.get('payment_method'):
-    #     qs = qs.filter(payment_method=request.GET['payment_method'])
-
-    # Pagination
     paginator = Paginator(qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
 
-    # Status change
-    # if request.method == "POST":
-    #     order = get_object_or_404(Order, id=request.POST['order_id'], user__is_staff=False)
-    #     order.status = request.POST['status']
-    #     order.save()
-    #     messages.success(request, f"Order {order.order_id} updated to {order.get_status_display()}")
-    #     return redirect('order_lists')
+    
 
     context = {
         'orders': page_obj,
@@ -679,6 +742,34 @@ def cancel_order(request, pk):
             messages.success(request, f"Order {order.order_id} cancelled successfully.")
         else:
             messages.error(request, "Cancellation reason is required.")
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', '').strip()
+
+        with transaction.atomic():
+            order.status = 'cancelled'
+            order.cancel_reason = reason or None
+            order.refund_status = 'completed'
+            order.refund_amount = order.grand_total  
+            order.save(update_fields=['status', 'cancel_reason', 'refund_status', 'refund_amount'])
+
+            # 2. Refund to wallet
+            wallet, _ = Wallet.objects.get_or_create(user=request.user)
+            wallet.credit(
+                amount=order.grand_total,
+                description=f"Refund for cancelled order #{order.order_id}",
+                
+            )
+
+            # 3. Restore stock
+            for item in order.items.select_related('variant'):
+                ProductVariant.objects.filter(id=item.variant.id).update(
+                    stock=F('stock') + item.quantity
+                )
+
+        messages.success(request, 'Order cancelled successfully. Full amount refunded to wallet.')
+        return redirect('order_list')
+
     
     return redirect('order_management')
 @login_required
@@ -699,9 +790,9 @@ def approve_return(request, order_id):
     order = get_object_or_404(Order, id=order_id, status='return_requested')
 
     if request.method == 'POST':
-        # Process return: restore stock + mark as returned
+        
         for item in order.items.all():
-            if item.return_requested:
+            if item.return_requested: 
                 item.variant.stock += item.quantity
                 item.variant.save()
                 item.is_returned = True
@@ -712,12 +803,7 @@ def approve_return(request, order_id):
         order.return_approved_at = timezone.now()
         order.save()
 
-        # Optional: Refund to wallet
-        # from wallet.models import Wallet, Transaction
-        # wallet, _ = Wallet.objects.get_or_create(user=order.user)
-        # wallet.balance += order.total_amount
-        # wallet.save()
-        # Transaction.objects.create(...)
+        
 
         messages.success(request, f"Return approved for order {order.order_id}")
         return redirect('manage_return_requests')
@@ -739,7 +825,7 @@ def reject_return(request, order_id):
             messages.error(request, "Rejection reason is required.")
             return render(request, 'admin_panel/reject_return.html', {'order': order})
 
-        order.status = 'delivered'  # back to delivered
+        order.status = 'delivered'  
         order.return_rejection_reason = reason
         order.return_rejected_at = timezone.now()
         order.save()
@@ -774,8 +860,8 @@ def product_offer_create(request):
             product_id = request.POST.get('product')
             discount_str = request.POST.get('discount_percentage', '').strip()
             active = request.POST.get('active') == 'on'
-            valid_from = request.POST.get('valid_from') or None
-            valid_until = request.POST.get('valid_until') or None
+            valid_from = request.POST.get('valid_from') 
+            valid_until = request.POST.get('valid_until') 
 
             if not product_id:
                 raise ValidationError("Product is required.")
@@ -994,7 +1080,7 @@ def category_offer_update(request, pk):
         'categories': categories,
         'offer_type': 'category',
         'action_url': request.path,
-        'back_url': reverse('admin:category_offer_list'),
+        'back_url': reverse('category_offer_list'),
     })
 
 
@@ -1138,7 +1224,7 @@ def coupon_delete(request, coupon_id):
         return redirect('coupon_list')
     
     # Optional: show confirmation page
-    return render(request, 'admin_panel/confirm_delete.html', {
+    return render(request, 'admin_panel/coupon_delete.html', {
         'object': coupon,
         'object_type': 'Coupon',
         'back_url': 'coupon_list',
@@ -1207,7 +1293,6 @@ def coupon_edit(request, pk):
     context = {
         'title': 'Edit Coupon',
         'coupon': coupon,
-        # Pass current values so they appear in inputs
         'code': coupon.code,
         'discount_percentage': coupon.discount_percentage,
         'discount_amount': coupon.discount_amount,

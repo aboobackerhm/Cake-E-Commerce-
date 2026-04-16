@@ -12,38 +12,42 @@
                 <nav class="space-y-2">
                     <a href="{% url 'profile_detail' %}" 
                        class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'profile_detail' %}bg-slate-100 font-bold text-sky-600{% endif %}">
-                        Profile
+                       <i class="fa-solid fa-user"></i>  Profile
                     </a>
 
                     <a href="{% url 'order_list' %}" 
                        class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'order_list' %}bg-slate-100 font-bold text-sky-600{% endif %}">
-                        Orders
+                        <i class="fa-solid fa-truck"></i>Orders
                     </a>
 
                     <a href="{% url 'my_wallet' %}" 
-                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100">
-                        Wallet
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100"><i class="fa-solid fa-wallet" ></i>
+                       Wallet 
                     </a>
 
                     <a href="{% url 'wishlist' %}"
                        class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'profile_edit' %}bg-slate-100 font-bold text-sky-600{% endif %}">
-                        Wish list
+                        <i class="fa-solid fa-heart"></i></i>Wish list
                     </a>
 
                     <a href="{% url 'password_change' %}" 
-                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'password_change' %}bg-slate-100 font-bold text-sky-600{% endif %}">
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'password_change' %}bg-slate-100 font-bold text-sky-600{% endif %}"><i class="fa-solid fa-unlock-keyhole"></i>
                         Change Password
                     </a>
 
                     <!-- ADDRESSES - THIS WAS COMPLETELY WRONG BEFORE -->
                     <a href="{% url 'address' %}" 
                        class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'address' %}bg-slate-100 font-bold text-sky-600{% endif %}">
-                        Addresses
+                        <i class="fa-solid fa-address-card"></i>Addresses
+                    </a>
+                    <a href="{% url 'all_coupons' %}"
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'profile_edit' %}bg-slate-100 font-bold text-sky-600{% endif %}"><i class="fa-solid fa-receipt"></i>
+                        Coupons
                     </a>
 
                     <!-- Refer & Earn (if you have this page) -->
-                    <a href="{% url 'all_coupons'  %}" 
-                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'refer_earn' %}bg-slate-100 font-bold text-sky-600{% endif %}">
+                    <a href="{% url 'my_referrals'  %}" 
+                       class="block px-4 py-2 text-sm font-medium text-slate-700 rounded-md hover:bg-slate-100 {% if request.resolver_match.url_name == 'refer_earn' %}bg-slate-100 font-bold text-sky-600{% endif %}"><i class="fa-solid fa-gift"></i>
                         Refer & Earn
                     </a>
                 </nav>
@@ -52,12 +56,27 @@
 
         <!-- Main Content Area -->
         <main class="flex-1">
+<!-- SweetAlert2 for Django Messages -->
             {% if messages %}
-                {% for message in messages %}
-                    <div class="mb-4 p-4 rounded-lg text-sm font-medium {% if message.tags == 'error' %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+              {% for message in messages %}
+                <script>
+                  document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                      icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
+                      title: '{{ message.tags|capfirst|default:"Notification" }}',
+                      text: '{{ message|escapejs }}',
+                      timer: 5000,
+                      timerProgressBar: true,
+                      showConfirmButton: false,
+                      toast: true,
+                      position: 'top-end',
+                      background: '{% if message.tags == "success" %}#f0fdf4{% elif message.tags == "error" %}#fef2f2{% else %}#f8fafc{% endif %}',
+                      color: '{% if message.tags == "success" %}#166534{% elif message.tags == "error" %}#991b1b{% else %}#1e2937{% endif %}',
+                      iconColor: '{% if message.tags == "success" %}#22c55e{% elif message.tags == "error" %}#ef4444{% else %}#3b82f6{% endif %}'
+                    });
+                  });
+                </script>
+              {% endfor %}
             {% endif %}
 
             {% block profile_section_content %}

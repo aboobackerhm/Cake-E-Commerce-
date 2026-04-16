@@ -8,22 +8,6 @@
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <h1 class="text-3xl font-bold text-gray-900 mb-8">Order #{{ order.order_id }}</h1>
 
-    <!-- ===================== VERY HELPFUL DEBUG BLOCK ===================== -->
-    <div class="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg text-sm">
-      <strong>RETURN DEBUG (remove later)</strong><br>
-      Status: <strong>{{ order.status }}</strong><br>
-      Delivered at: <strong>{{ order.delivered_at|default:"NOT SET" }}</strong><br>
-      Can request return: <strong style="color: {% if order.can_request_return %}green{% else %}red{% endif %}">
-        {{ order.can_request_return }}
-      </strong><br>
-      Return requested: {{ order.return_requested_at|default:"No" }}<br>
-      Rejected: {{ order.return_rejected_at|default:"No" }}<br>
-      {% if order.delivered_at %}
-        Days since delivery ≈ {{ order.delivered_at|timesince }}
-      {% endif %}
-    </div>
-    <!-- ==================================================================== -->
-
     <div class="grid lg:grid-cols-3 gap-8">
       <!-- Left column - Order info + Items + Address -->
       <div class="lg:col-span-2 space-y-6">

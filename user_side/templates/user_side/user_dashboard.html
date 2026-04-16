@@ -4,82 +4,126 @@
 {% block title %}Dashboard - MR CAKES{% endblock %}
 
 {% block content %}
-    <!-- Hero Section -->
-    
 
-    <section class="h-screen bg-cover bg-center flex items-center justify-center" style="background-image: url('{% static "images/tn2.jpeg" %}');">
-        <div class="text-center bg-white/70 p-1 rounded-xl shadow-lg">
-            <h1 class="text-5xl text-white font-bold mb-6">Fresh, Modern & Tasty Cakes</h1>
-            <p class="text-white text-3xl">Handcrafted cakes baked with love and the finest ingredients.</p>
-            <a href="{% url 'product_list' %}"
-            class="inline-block px-6 py-2 bg-white text-black font-semibold rounded-lg shadow hover:bg-black-700 transition mb-6">
-            Order Now
-            </a>
-        </div>
-    </section>
+<!-- SweetAlert2 CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
+<!-- SweetAlert for Django Messages -->
+{% if messages %}
+  {% for message in messages %}
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        Swal.fire({
+          icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% elif message.tags == "warning" %}warning{% else %}info{% endif %}',
+          title: '{{ message.tags|capfirst|default:"Notification" }}',
+          text: '{{ message|escapejs }}',
+          timer: 5000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+          toast: true,
+          position: 'top-end',
+          background: '{% if message.tags == "success" %}#f0fdf4{% elif message.tags == "error" %}#fef2f2{% elif message.tags == "warning" %}#fffbeb{% else %}#f8fafc{% endif %}',
+          color: '{% if message.tags == "success" %}#166534{% elif message.tags == "error" %}#991b1b{% elif message.tags == "warning" %}#92400e{% else %}#1e2937{% endif %}',
+          iconColor: '{% if message.tags == "success" %}#22c55e{% elif message.tags == "error" %}#ef4444{% elif message.tags == "warning" %}#f59e0b{% else %}#3b82f6{% endif %}'
+        });
+      });
+    </script>
+  {% endfor %}
+{% endif %}
 
-    <!-- Best Selling Section -->
-    <section class="max-w-7xl mx-auto px-4 py-12 bg-black">
-        <h2 class="text-2xl font-bold mb-6 text-center text-white">Latest Cakes</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {% for product in best_selling %}
-                <div class="bg-white shadow rounded-xl overflow-hidden">
-                    <a href="{% url 'product_list' %}" class="block overflow-hidden rounded-t-xl">
-                        {% with first_image=product.images.first %}
-                            {% if first_image %}
-                                <img src="{{ first_image.image.url }}" alt="{{ product.name }}" class="w-full h-40 object-contain">
-                            {% else %}
-                                <img src="https://via.placeholder.com/300?text=No+Image" alt="{{ product.name }}" class="w-full h-40 object-contain">
-                            {% endif %}
-                        {% endwith %}
-                    </a>
-                    <div class="p-4">
-                        <h3 class="font-semibold text-pretty">
-                            <a href="{% url 'product_list'  %}" class="hover:underline">{{ product.name }}</a>
-                        </h3>
-                        <p class="text-gray-500">${{ product.get_min_price|default:"N/A"|floatformat:2 }}</p>
-                        <a href="{% url 'product_details' product.id %}" class="mt-2 inline-block rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600">View Details</a>
-                    </div>
+<!-- Apply Referral Code Section -->
+<section class="bg-white py-8 border-b shadow-sm">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="bg-gradient-to-r from-purple-600 to-violet-600 rounded-3xl p-8 text-white">
+            <div class="flex flex-col lg:flex-row items-center gap-8">
+                
+                <div class="flex-1">
+                    <h3 class="text-3xl font-bold flex items-center gap-3">
+                        <i class="bi bi-gift-fill text-4xl"></i>
+                        Have a Referral Code?
+                    </h3>
+                    <p class="mt-3 text-lg text-purple-100">
+                        Enter your friend's referral code and get <strong>₹100</strong> instantly in your wallet!
+                    </p>
                 </div>
-            {% empty %}
-                <p class="text-gray-600 col-span-full">No best-selling products available.</p>
-            {% endfor %}
-        </div>
-    </section>
 
-    <!-- Same Day Foods Section
-    <section class="bg-gray-100 py-12">
-        <div class="max-w-7xl mx-auto px-4">
-            <h2 class="text-2xl font-bold mb-6">Same Day Foods - Shop Your Favorite Cake!</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {% for product in same_day_products %}
-                    <div class="bg-white shadow rounded-xl overflow-hidden">
-                        <a href="{% url 'product_details' product.id %}" class="block overflow-hidden rounded-t-xl">
-                            {% with first_image=product.images.first %}
-                                {% if first_image %}
-                                    <img src="{{ first_image.image.url }}" alt="{{ product.name }}" class="w-full h-40 object-contain">
-                                {% else %}
-                                    <img src="https://via.placeholder.com/300?text=No+Image" alt="{{ product.name }}" class="w-full h-40 object-contain">
-                                {% endif %}
-                            {% endwith %}
-                        </a>
-                        <div class="p-4">
-                            <h3 class="font-semibold text-pretty">
-                                <a href="{% url 'product_details' product.id %}" class="hover:underline">{{ product.name }}</a>
-                            </h3>
-                            <p class="text-gray-500">${{ product.get_min_price|default:"N/A"|floatformat:2 }}</p>
-                            <a href="{% url 'product_details' product.id %}" class="mt-2 inline-block rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-600">View Details</a>
-                        </div>
+                <!-- Referral Form -->
+                <form method="POST" action="{% url 'apply_referral' %}" class="flex-1 w-full max-w-md">
+                    {% csrf_token %}
+                    <div class="flex gap-3">
+                        <input 
+                            type="text" 
+                            name="referral_code"
+                            placeholder="Enter Referral Code (e.g. ABCD1234)"
+                            class="flex-1 px-6 py-4 rounded-2xl text-black text-lg focus:outline-none focus:ring-4 focus:ring-white"
+                            maxlength="12"
+                            style="text-transform: uppercase;"
+                            required>
+                        <button 
+                            type="submit"
+                            class="bg-white text-purple-700 font-bold px-10 py-4 rounded-2xl hover:bg-amber-300 transition text-lg">
+                            Apply
+                        </button>
                     </div>
-                {% empty %}
-                    <p class="text-gray-600 col-span-full">No same-day products available.</p>
-                {% endfor %}
+                </form>
+
             </div>
         </div>
-    </section> -->
-{% endblock %}
+    </div>
+</section>
 
-<!-- {% block mobile_filters %}
-    No mobile filters needed for this dashboard page
-{% endblock %}  -- >
+<!-- Hero Section -->
+<section class="h-screen bg-cover bg-center flex items-center justify-center" 
+         style="background-image: url('{% static "images/tn2.jpeg" %}');">
+    <div class="text-center bg-black/50 backdrop-blur-sm p-10 rounded-3xl shadow-2xl max-w-2xl mx-auto">
+        <h1 class="text-5xl md:text-6xl text-white font-bold mb-6 drop-shadow-lg">
+            Fresh, Modern & Tasty Cakes
+        </h1>
+        <p class="text-white text-2xl md:text-3xl mb-8 drop-shadow">
+            Handcrafted cakes baked with love and the finest ingredients.
+        </p>
+        <a href="{% url 'product_list' %}" 
+           class="inline-block px-10 py-4 bg-white text-black font-semibold text-xl rounded-2xl shadow-lg hover:bg-amber-300 hover:text-purple-700 transition-all">
+            Order Now
+        </a>
+    </div>
+</section>
+
+<!-- Best Selling Section -->
+<section class="max-w-7xl mx-auto px-4 py-12 bg-black">
+    <h2 class="text-3xl font-bold mb-10 text-center text-white">Latest Cakes</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        {% for product in best_selling %}
+            <div class="bg-white shadow-xl rounded-2xl overflow-hidden hover:scale-105 transition-transform duration-300">
+                <a href="{% url 'product_details' product.id %}" class="block overflow-hidden">
+                    {% with first_image=product.images.first %}
+                        {% if first_image %}
+                            <img src="{{ first_image.image.url }}" 
+                                 alt="{{ product.name }}" 
+                                 class="w-full h-52 object-cover">
+                        {% else %}
+                            <img src="https://via.placeholder.com/300?text=No+Image" 
+                                 alt="{{ product.name }}" 
+                                 class="w-full h-52 object-cover">
+                        {% endif %}
+                    {% endwith %}
+                </a>
+                <div class="p-5"> 
+                    <h3 class="font-semibold text-lg leading-tight mb-2">
+                        <a href="{% url 'product_details' product.id %}" class="hover:underline">{{ product.name }}</a>
+                    </h3>
+                    <p class="text-gray-600 font-medium">₹{{ product.get_min_price|default:"N/A"|floatformat:2 }}</p>
+                    <a href="{% url 'product_details' product.id %}" 
+                       class="mt-4 inline-block w-full text-center rounded-xl bg-orange-600 px-6 py-3 text-sm font-semibold text-white hover:bg-orange-700 transition">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-gray-400 col-span-full text-center py-10">No cakes available at the moment.</p>
+        {% endfor %}
+    </div>
+</section>
+
+{% endblock %}

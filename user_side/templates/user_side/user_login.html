@@ -5,188 +5,177 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | MR CAKES</title>
-
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- Animate.css -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
     <style>
         body {
-            background: linear-gradient(135deg, #fff1eb 0%, #fce7e1 100%);
+            background: linear-gradient(135deg, #ecebea 0%, #fdfdfd 100%);
             min-height: 100vh;
-            font-family: 'Segoe UI', sans-serif;
+        }
+        .card {
+            box-shadow: 0 10px 25px -5px rgba(212, 56, 13, 0.15);
+            max-width: 380px;           /* Reduced width */
+            border-radius: 24px;
+        }
+        .input-focus {
+            transition: all 0.3s ease;
+        }
+        .input-focus:focus {
+            box-shadow: 0 0 0 3px rgba(250, 249, 249, 0.15);
+            border-color: #f5f3f3;
+        }
+        .btn-login {
+            background: linear-gradient(45deg, #000000, #3a3939);
+            transition: all 0.3s ease;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(212, 56, 13, 0.35);
         }
         .navbar-brand {
             font-weight: 800;
             color: #d4380d !important;
-            font-size: 1.8rem;
+            font-size: 1.75rem;
         }
-        .card {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(212, 56, 13, 0.15);
-            overflow: hidden;
-        }
-        .btn-google {
-            background: white;
-            border: 2px solid #eee;
-            border-radius: 12px;
-            padding: 12px;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .btn-google:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            border-color: #ddd;
-        }
-        .btn-login {
-            background: linear-gradient(45deg, #d4380d, #ff6b35);
-            border: none;
-            border-radius: 12px;
-            padding: 14px;
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-        .btn-login:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 30px rgba(212, 56, 13, 0.4);
-        }
-        .alert-dismissible .btn-close {
-            padding: 0.75rem 1rem;
-        }
-        .error-text { color: #e63946; font-size: 0.92rem; margin-top: 5px; }
     </style>
 </head>
-<body>
+<body class="flex items-center justify-center min-h-screen p-4">
 
-<!-- Navbar -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-    <div class="container">
-        <a class="navbar-brand" href="/">MR CAKES</a>
-    </div>
-</nav>
-
-<!-- Breadcrumb -->
-<div class="container mt-3">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">Home</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Login</li>
-        </ol>
+    <!-- Navbar -->
+    <nav class="absolute top-0 left-0 right-0 bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <a href="/" class="navbar-brand flex items-center gap-2">
+                <i class="fas fa-birthday-cake"></i>
+                MR CAKES
+            </a>
+        </div>
     </nav>
-</div>
 
-<!-- Login Form -->
-<div class="container my-1">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
+    <div class="bg-white p-7 rounded-3xl card w-full mt-12">
 
-            <div class="card p-5 animate__animated animate__fadeInUp">
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-2xl mb-3">
+                <i class="fas fa-sign-in-alt text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800">Welcome Back</h2>
+            <p class="text-gray-500 text-sm mt-1">Sign in to your account</p>
+        </div>
 
-                <div class="text-center mb-4">
-                    <h3 class="fw-bold text-dark">Welcome Back!</h3>
-                    <p class="text-muted">Login to continue to your account</p>
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-5 p-3.5 rounded-2xl text-sm flex items-center gap-2
+                    {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-100
+                    {% else %}bg-green-50 text-green-700 border border-green-100{% endif %}">
+                    <i class="fas {% if message.tags == 'error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+                    {{ message }}
                 </div>
+            {% endfor %}
+        {% endif %}
 
-                <!-- Success / Error Messages from Django messages -->
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show animate__animated animate__fadeInDown" role="alert">
-                            <i class="fas {% if message.tags == 'error' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} me-2"></i>
-                            <strong>{{ message }}</strong>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
+        {% if errors.non_field_errors %}
+            <div class="mb-5 p-3.5 bg-red-50 border border-red-100 text-red-700 rounded-2xl text-sm flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i>
+                {{ errors.non_field_errors }}
+            </div>
+        {% endif %}
 
-                <!-- Form Field Errors (your custom errors dict) -->
-                {% if errors %}
-                    {% if errors.non_field_errors %}
-                        <div class="alert alert-danger alert-dismissible fade show animate__animated animate__shakeX" role="alert">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>{{ errors.non_field_errors }}</strong>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endif %}
-                {% endif %}
+        <form method="POST" action="{% url 'user_login' %}" class="space-y-5">
+            {% csrf_token %}
 
-                <!-- Google Login -->
-                <a href="{% url 'social:begin' 'google-oauth2' %}" class="btn btn-google w-100 mb-4 d-flex align-items-center justify-content-center gap-3 shadow-sm">
-                    <img src="https://img.icons8.com/fluency/32/000000/google-logo.png" width="24" alt="Google">
-                    Continue with Google
-                </a>
-
-                <div class="text-center text-muted mb-4 position-relative">
-                    <hr class="border-top">
-                    <span class="bg-white px-3 position-absolute top-50 start-50 translate-middle">or</span>
+            <!-- Email -->
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1.5 tracking-wider">EMAIL ADDRESS</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-envelope text-gray-400"></i>
+                    </div>
+                    <input type="email" 
+                           name="username" 
+                           class="input-focus pl-11 py-3 w-full border border-gray-300 rounded-2xl focus:outline-none text-sm"
+                           placeholder="you@example.com"
+                           required>
                 </div>
-
-                <!-- Login Form -->
-                <form method="POST" action="{% url 'user_login' %}">
-                    {% csrf_token %}
-
-                    <div class="mb-3">
-                        <label class="form-label fw-600">Email Address</label>
-                        <input type="email" name="username" class="form-control form-control-lg" placeholder="you@example.com" required>
-                        {% if errors.username %}
-                            <div class="error-text animate__animated animate__fadeIn">
-                                <i class="fas fa-times-circle me-1"></i>{{ errors.username }}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-600">Password</label>
-                        <input type="password" name="password" class="form-control form-control-lg" placeholder="Enter password" required>
-                        {% if errors.password %}
-                            <div class="error-text animate__animated animate__fadeIn">
-                                <i class="fas fa-times-circle me-1"></i>{{ errors.password }}
-                            </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="text-end mb-4">
-                        <a href="{% url 'forgot_password' %}" class="text-decoration-none small fw-600 text-danger">
-                            Forgot Password?
-                        </a>
-                    </div>
-
-                    <button type="submit" class="btn btn-login w-100 text-white shadow-lg">
-                        Login to Account
-                    </button>
-                </form>
-
-                <div class="text-center mt-4">
-                    <p class="mb-0 text-muted">
-                        Don’t have an account?
-                        <a href="{% url 'user_signup' %}" class="fw-bold text-danger text-decoration-none">Sign up</a>
+                {% if errors.username %}
+                    <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i class="fas fa-times-circle"></i> {{ errors.username }}
                     </p>
-                </div>
+                {% endif %}
+            </div>
 
+            <!-- Password -->
+            <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1.5 tracking-wider">PASSWORD</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <i class="fas fa-lock text-gray-400"></i>
+                    </div>
+                    <input type="password" 
+                           name="password" 
+                           class="input-focus pl-11 py-3 w-full border border-gray-300 rounded-2xl focus:outline-none text-sm"
+                           placeholder="••••••••"
+                           required>
+                </div>
+                {% if errors.password %}
+                    <p class="text-red-500 text-xs mt-1 flex items-center gap-1">
+                        <i class="fas fa-times-circle"></i> {{ errors.password }}
+                    </p>
+                {% endif %}
+            </div>
+
+            <!-- Forgot Password -->
+            <div class="text-right -mt-1">
+                <a href="{% url 'forgot_password' %}" 
+                   class="text-orange-600 hover:text-orange-700 text-sm font-medium">
+                    Forgot Password?
+                </a>
+            </div>
+
+            <!-- Login Button -->
+            <button type="submit" 
+                    class="btn-login w-full text-white font-semibold py-3.5 rounded-2xl text-base">
+                Sign In
+            </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="my-6 relative">
+            <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-gray-200"></div>
+            </div>
+            <div class="relative flex justify-center">
+                <span class="bg-white px-4 text-xs text-gray-400">OR</span>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Footer -->
-<footer class="bg-white mt-5 py-5 border-top">
-    <div class="container text-center text-muted">
-        <p class="mb-2 fw-600">Delicious cakes, happiness for you and your moments!</p>
-        <div class="d-flex justify-content-center gap-4 mb-3">
-            <a href="#" class="text-decoration-none">Privacy Policy</a>
-            <a href="#" class="text-decoration-none">Contact</a>
-            <a href="#" class="text-decoration-none">FAQs</a>
+        <!-- Google Login -->
+        <a href="{% url 'social:begin' 'google-oauth2' %}" 
+           class="flex items-center justify-center gap-3 w-full border border-gray-300 hover:border-gray-400 bg-white text-gray-700 font-medium py-3 rounded-2xl transition-all hover:shadow text-sm">
+            <img src="https://img.icons8.com/fluency/32/000000/google-logo.png" width="22" alt="Google">
+            Continue with Google
+        </a>
+
+        <!-- Sign Up Link -->
+        <div class="text-center mt-7 text-gray-600 text-sm">
+            Don’t have an account? 
+            <a href="{% url 'user_signup' %}" 
+               class="font-semibold text-orange-600 hover:text-orange-700">
+                Sign up
+            </a>
         </div>
-        <p class="small mb-0">© 2025 MR CAKES. All rights reserved.</p>
-    </div>
-</footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        <!-- Decorative Icon -->
+        <div class="flex justify-center mt-8">
+            <div class="w-10 h-10 bg-gradient-to-br from-orange-100 to-amber-100 rounded-2xl flex items-center justify-center">
+                <i class="fas fa-birthday-cake text-2xl text-orange-500"></i>
+            </div>
+        </div>
+
+    </div>
+
 </body>
 </html>

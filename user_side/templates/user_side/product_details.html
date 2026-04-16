@@ -3,6 +3,9 @@
 {% block title %}{{ product.name }} - Product Details{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
     <main id="main" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <!-- Breadcrumbs -->
         <nav class="py-4 text-sm text-gray-600" aria-label="Breadcrumb">
@@ -17,15 +20,24 @@
             </ol>
         </nav>
 
-        {% if messages %}
-            <div class="mb-6">
-                {% for message in messages %}
-                    <div class="rounded-md p-4 {% if message.tags == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
+{% if messages %}
+      {% for message in messages %}
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+              icon: '{% if message.tags == "success" %}success{% elif message.tags == "error" %}error{% else %}info{% endif %}',
+              title: '{{ message.tags|capfirst|default:"Message" }}',
+              text: '{{ message|escapejs }}',
+              timer: 4500,
+              timerProgressBar: true,
+              showConfirmButton: false,
+              toast: true,
+              position: 'top-end'
+            });
+          });
+        </script>
+      {% endfor %}
+    {% endif %}
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
             <!-- Image Section -->
@@ -113,12 +125,12 @@
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-end">
                         <!-- Size -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                            <label class="block text-sm font-medium text-black mb-1">Size</label>
                             <div class="flex flex-wrap gap-2" id="size-options">
                                 {% for v in variants %}
                                     {% if v.stock > 0 %}
                                         <button type="button"
-                                                class="size-option px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:border-gray-700 transition-all duration-200 {% if v == selected_variant %}bg-black text-white border-black{% endif %}"
+                                                class="size-option px-4 py-2 border border-gray-300 rounded-md text-white hover:border-gray-700 transition-all duration-200 {% if v == selected_variant %}bg-black text-white border-black{% endif %}"
                                                 data-id="{{ v.id }}"
                                                 data-original-price="{{ v.original_price|floatformat:2 }}"
                                                 data-discounted-price="{{ v.discounted_price|floatformat:2 }}"
@@ -137,7 +149,7 @@
                             <div class="flex items-center border border-gray-300 rounded-md shadow-sm w-32">
                                 <button type="button" id="decrement-btn" class="px-3 py-2 text-gray-600 hover:text-white hover:bg-sky-600 rounded-l-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all" onclick="changeQuantity(-1)" {% if quantity <= 1 %}disabled{% endif %}>−</button>
                                 <input type="number" name="quantity" id="quantity" value="{{ quantity|default:1 }}" min="1" max="5" class="w-full text-center border-0 focus:ring-0 outline-none text-gray-700 font-medium" readonly>
-                                <button type="button" id="increment-btn" class="px-3 py-2 text-gray-600 hover:text-white hover:bg-sky-600 rounded-r-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all" onclick="changeQuantity(1)" {% if quantity >= 5 %}disabled{% endif %}>+</button>
+                                <button type="button" id="increment-btn" class="px-3 py-2 text-gray-600 hover:text-white hover:bg-sky-600 rounded-r-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all" onclick="changeQuantity(1)" {% if quantity > 5 %}disabled{% endif %}>+</button>
                             </div>
                         </div>
 
@@ -283,11 +295,21 @@
         }
     </style>
 
-    <!-- ────────────────────────────────────────────── -->
-    <!--                   JAVASCRIPT                   -->
-    <!-- ────────────────────────────────────────────── -->
+3     <!--                   JAVASCRIPT                   -->
 
     <script>
+        function showToast(icon, title, text = '') {
+    Swal.fire({
+        icon: icon,
+        title: title,
+        text: text,
+        timer: 4000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+    });
+}
         // ================= Zoom Feature =================
 const zoomContainer = document.getElementById('zoom-image');
         const mainImage = document.getElementById('main-image');
@@ -446,14 +468,13 @@ const zoomContainer = document.getElementById('zoom-image');
             })
             .then(r => r.json())
             .then(data => {
-                if (data.success) {
-                    document.querySelector('#cart-count')?.update(data.cart_count);
-                    msg.innerHTML = `<div class="rounded-md bg-green-50 p-4 text-green-700">${data.msg} <a href="${data.cart_url}" class="underline font-medium">View Cart</a></div>`;
-                    document.getElementById('quantity').value = 1;
-                } else {
-                    msg.innerHTML = `<div class="rounded-md bg-red-50 p-4 text-red-700">${data.msg}</div>`;
-                }
-            })
+        if (data.success) {
+            showToast('success', 'Added to Cart!', data.msg || 'Product added successfully');
+            document.getElementById('quantity').value = 1;
+        } else {
+            showToast('error', 'Failed', data.msg || 'Something went wrong');
+        }
+    })
             .finally(() => {
                 btn.disabled = false;
                 btn.textContent = 'Add to Cart';
@@ -462,10 +483,17 @@ const zoomContainer = document.getElementById('zoom-image');
 
         // ================= Remove from Cart =================
         function confirmRemove(itemId) {
-            if (!confirm("Remove this item from cart?")) return;
-
+    Swal.fire({
+        title: 'Remove Item?',
+        text: "Are you sure you want to remove this item from cart?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Yes, Remove'
+    }).then((result) => {
+        if (result.isConfirmed) {
             const form = document.getElementById(`remove-from-cart-form-${itemId}`);
-            const msg = document.getElementById('ajax-message');
 
             fetch("{% url 'remove_from_cart' %}", {
                 method: 'POST',
@@ -478,11 +506,14 @@ const zoomContainer = document.getElementById('zoom-image');
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    document.querySelector('#cart-count')?.update(data.cart_count);
+                    showToast('success', 'Removed', data.msg);
                     form.closest('div').remove();
-                    msg.innerHTML = `<div class="rounded-md bg-green-50 p-4 text-green-700">${data.msg} <a href="${data.cart_url}" class="underline font-medium">View Cart</a></div>`;
+                } else {
+                    showToast('error', 'Failed', data.msg);
                 }
             });
+        }
+    });
         }
     </script>
 {% endblock %}

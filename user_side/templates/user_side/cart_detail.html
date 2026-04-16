@@ -4,6 +4,11 @@
 {% block title %}Shopping Cart{% endblock %}
 
 {% block content %}
+
+<!-- SweetAlert2 CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+
 <div class="min-h-screen bg-gray-50 py-8">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <h1 class="text-3xl font-bold text-gray-900 mb-8">Your Shopping Cart</h1>
@@ -34,25 +39,25 @@
 
                   <!-- Price with Offer Support -->
                   <div class="mt-2">
-  {% if item.variant.product.has_offer %}
-    <div class="flex items-baseline gap-3">
-      <span class="text-xl font-bold text-red-600">
-        ₹{{ item.discounted_unit_price|floatformat:2 }}
-      </span>
-      <span class="text-base text-gray-500 line-through">
-        ₹{{ item.original_unit_price|floatformat:2 }}
-      </span>
-    </div>
-    <p class="text-sm text-green-600 mt-1">
-      Save ₹  {{ item.total_savings|floatformat:2 }}
-    </p>
-  {% else %}
-    <span class="text-xl font-bold text-gray-900">
-      ₹{{ item.original_unit_price|floatformat:2 }}
-    </span>
-  {% endif %}
-  <p class="text-sm text-gray-600 mt-1">× {{ item.quantity }}</p>
-</div>
+                    {% if item.variant.product.has_offer %}
+                      <div class="flex items-baseline gap-3">
+                        <span class="text-xl font-bold text-red-600">
+                          ₹{{ item.discounted_unit_price|floatformat:2 }}
+                        </span>
+                        <span class="text-base text-gray-500 line-through">
+                          ₹{{ item.original_unit_price|floatformat:2 }}
+                        </span>
+                      </div>
+                      <p class="text-sm text-green-600 mt-1">
+                        Save ₹{{ item.total_savings|floatformat:2 }}
+                      </p>
+                    {% else %}
+                      <span class="text-xl font-bold text-gray-900">
+                        ₹{{ item.original_unit_price|floatformat:2 }}
+                      </span>
+                    {% endif %}
+                    <p class="text-sm text-gray-600 mt-1">× {{ item.quantity }}</p>
+                  </div>
 
                   <!-- Invalid Item Reason -->
                   {% if not item.is_valid %}
@@ -70,8 +75,7 @@
                       <button type="button"
                               data-id="{{ item.id }}"
                               data-action="decrement"
-                              class="qty-btn px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                              {% if item.quantity <= 1 %}disabled{% endif %}>−</button>
+                              class="qty-btn px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50">−</button>
                       <span id="qty-{{ item.id }}" class="px-4 py-1 font-medium">{{ item.quantity }}</span>
                       <button type="button"
                               data-id="{{ item.id }}"
@@ -114,7 +118,8 @@
                   <span id="grand-total">₹{{ cart_total|floatformat:2 }}</span>
                 </div>
               </div>
-              <a href="{% url 'checkout' %}" class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white text-center py-3 rounded-lg font-semibold mt-4 transition">
+              <a href="{% url 'checkout' %}" 
+                 class="block w-full bg-indigo-600 hover:bg-indigo-700 text-white text-center py-3 rounded-lg font-semibold mt-6 transition">
                 Proceed to Checkout
               </a>
             </div>
@@ -130,7 +135,8 @@
           </svg>
         </div>
         <h3 class="text-2xl font-bold text-gray-800 mb-4">Your cart is empty</h3>
-        <a href="{% url 'product_list' %}" class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition">
+        <a href="{% url 'product_list' %}" 
+           class="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition">
           Start Shopping
         </a>
       </div>
@@ -138,8 +144,74 @@
   </div>
 </div>
 
-<!-- AJAX Quantity Update Script (kept exactly as you had) -->
 <script>
+// ================= SweetAlert Helper =================
+function showToast(icon, title, text = '') {
+    Swal.fire({
+        icon: icon,
+        title: title,
+        text: text,
+        timer: 4000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        toast: true,
+        position: 'top-end'
+    });
+}
+
+// ================= Confirm Remove with SweetAlert =================
+function confirmRemove(itemId) {
+    Swal.fire({
+        title: 'Remove Item?',
+        text: "Are you sure you want to remove this item from your cart?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Yes, Remove'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const container = document.getElementById('cart-item-' + itemId);
+            if (!container) return;
+
+            fetch(`/cart/remove/${itemId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content,
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    container.style.transition = 'opacity 0.4s';
+                    container.style.opacity = '0';
+                    setTimeout(() => {
+                        container.remove();
+                        if (data.item_count === 0) {
+                            location.reload();
+                        }
+                    }, 400);
+
+                    showToast('success', 'Item Removed', data.message || 'Item has been removed from cart');
+
+                    // Update totals
+                    document.getElementById('grand-total').textContent = '₹' + Number(data.grand_total).toFixed(2);
+                    document.getElementById('subtotal-amount').textContent = '₹' + Number(data.grand_total).toFixed(2);
+                    document.getElementById('subtotal-label').textContent = `Subtotal (${data.item_count} items)`;
+                } else {
+                    showToast('error', 'Failed', data.message || 'Could not remove item');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast('error', 'Error', 'Network error. Please try again.');
+            });
+        }
+    });
+}
+
+// ================= Quantity Update (Improved with SweetAlert) =================
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
@@ -147,14 +219,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const btn = e.target.closest('.qty-btn');
         if (!btn || btn.disabled) return;
 
-        e.preventDefault();
-
         const itemId = btn.dataset.id;
         const action = btn.dataset.action;
         const container = document.getElementById('cart-item-' + itemId);
         if (!container) return;
 
-        const plusBtn  = container.querySelector('[data-action="increment"]');
+        const plusBtn = container.querySelector('[data-action="increment"]');
         const minusBtn = container.querySelector('[data-action="decrement"]');
         plusBtn.disabled = true;
         minusBtn.disabled = true;
@@ -163,8 +233,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const oldQty = qtySpan.textContent;
         qtySpan.textContent = '...';
 
-        const url = action === 'increment'
-            ? `/cart/increment/${itemId}/`
+        const url = action === 'increment' 
+            ? `/cart/increment/${itemId}/` 
             : `/cart/decrement/${itemId}/`;
 
         fetch(url, {
@@ -186,29 +256,28 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (data.item_count === 0) {
                         setTimeout(() => location.reload(), 500);
                     }
+                    showToast('success', 'Item Removed');
                 } else {
                     qtySpan.textContent = data.new_quantity;
                     const itemTotalEl = document.getElementById('item-total-' + itemId);
-                    if (itemTotalEl) {
-                        itemTotalEl.textContent = '₹' + Number(data.item_total).toFixed(2);
-                    }
-                    if (plusBtn) {
-                        plusBtn.disabled = data.new_quantity >= data.available_stock;
-                    }
+                    if (itemTotalEl) itemTotalEl.textContent = '₹' + Number(data.item_total).toFixed(2);
+
+                    if (plusBtn) plusBtn.disabled = data.new_quantity >= data.available_stock;
                 }
 
+                // Update grand total
                 const formatted = '₹' + Number(data.grand_total).toFixed(2);
                 document.getElementById('grand-total').textContent = formatted;
                 document.getElementById('subtotal-amount').textContent = formatted;
                 document.getElementById('subtotal-label').textContent = `Subtotal (${data.item_count} items)`;
             } else {
-                alert(data.message || 'Cannot update quantity');
+                showToast('error', 'Failed', data.message || 'Cannot update quantity');
                 qtySpan.textContent = oldQty;
             }
         })
         .catch(err => {
             console.error(err);
-            alert('Network error. Please try again.');
+            showToast('error', 'Network Error', 'Please try again.');
             qtySpan.textContent = oldQty;
         })
         .finally(() => {
@@ -218,4 +287,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+
 {% endblock %}

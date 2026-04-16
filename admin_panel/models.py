@@ -14,6 +14,7 @@ from datetime import timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.db.models import F,CheckConstraint,Q
+from django.utils.crypto import get_random_string
 
 
 
@@ -47,7 +48,7 @@ class Category(models.Model):
 class Product(models.Model):
     name=models.CharField(max_length=200)
     description=models.TextField()
-    category=models.ForeignKey('Category',on_delete=models.CASCADE,related_name='products')
+    category=models.ForeignKey(Category,on_delete=models.CASCADE,null=True,blank=True,related_name='products')
     created_at=models.DateTimeField(auto_now_add=True)
     slug=models.SlugField(max_length=225,unique=True,null=True,blank=True)
     is_active=models.BooleanField(default=True)
@@ -64,7 +65,6 @@ class Product(models.Model):
         return None
 
     def get_min_price(self):
-        """Return the minimum variant price if exists"""
         min_variant = self.variants.order_by("price").first()
         return min_variant.price if min_variant else None
     
@@ -72,54 +72,59 @@ class Product(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+    def get_active_product_offer(self):
+        now = timezone.now()
+        return self.product_offers.filter(
+            active=True,
+            valid_from__lte=now,
+            valid_until__gte=now,
+        ).order_by('-discount_percentage').first()
+
+    def get_active_category_offer(self):
+        now = timezone.now()
+        if not self.category:
+            return None
+        return self.category.category_offers.filter(
+            active=True,
+            valid_from__lte=now,
+            valid_until__gte=now,
+        ).order_by('-discount_percentage').first()
+
+    def get_best_active_offer(self):
+          
+        prod_offer = self.get_active_product_offer()
+        cat_offer  = self.get_active_category_offer()
+
+        if prod_offer and cat_offer:
+            return prod_offer if prod_offer.discount_percentage > cat_offer.discount_percentage else cat_offer
+        return prod_offer or cat_offer
+
     def get_best_offer_percentage(self):
-        """
-        Returns the highest active discount percentage for this product
-        (product-specific offer wins over category offer only if higher)
-        """
-        # Product-level offer (highest priority if exists and active)
-        prod_offer = self.product_offers.filter(active=True).order_by('-discount_percentage').first()
-        if prod_offer and prod_offer.is_active_now():  # assuming you have is_active_now() method
-            return prod_offer.discount_percentage
+        offer = self.get_best_active_offer()
+        return offer.discount_percentage if offer else Decimal('0.00')
 
-        # Otherwise category-level offer
-        cat_offer = self.category.category_offers.filter(active=True).order_by('-discount_percentage').first()
-        if cat_offer and cat_offer.is_active_now():
-            return cat_offer.discount_percentage
-
-        return Decimal('0.00')
+    def has_active_offer(self):
+        return self.get_best_offer_percentage() > Decimal('0.00')
 
     def get_discounted_price(self, variant=None):
-        """
-        Returns the final price after applying the best offer
-        Pass variant if you want variant-specific price
-        """
-        base_price = variant.price if variant else self.get_min_price()  # or self.variants.first().price
-        if not base_price:
+        base_price = variant.price if variant else self.get_min_price()
+        if not base_price or base_price <= 0:
             return Decimal('0.00')
 
         discount_perc = self.get_best_offer_percentage()
         if discount_perc == 0:
             return base_price
 
-        discount_factor = Decimal('1') - (discount_perc / Decimal('100'))
-        return (base_price * discount_factor).quantize(Decimal('0.01'))
+        factor = Decimal('1') - (discount_perc / Decimal('100'))
+        return (base_price * factor).quantize(Decimal('0.01'))
 
+    # Remove or deprecate this — it's misleading
     def get_savings_percentage(self):
-        """
-        Returns the highest active discount percentage or 0 if none
-        """
-        # Your existing logic...
-        prod_offer = self.product_offers.filter(active=True).first()
-        prod_disc = prod_offer.discount_percentage if prod_offer else Decimal('0.00')
+        # Option A: keep for backward compat, but fix it
+        return self.get_best_offer_percentage()
 
-        cat_offer = self.category.category_offers.filter(active=True).first()
-        cat_disc = cat_offer.discount_percentage if cat_offer else Decimal('0.00')
-
-        effective_disc = max(prod_disc, cat_disc)
-
-        # IMPORTANT: Return Decimal always — never None
-        return effective_disc if effective_disc else Decimal('0.00')
+        # Option B: delete it and update all usages to get_best_offer_percentage()
+    
     @property
     def has_offer(self):
         return self._has_offer if self._has_offer is not None else (self.get_best_offer_percentage() > Decimal('0.00'))
@@ -148,11 +153,11 @@ class ProductImage(models.Model):
 class ProductVariant(models.Model):
     SIZE_CHOICES=(
         ('500g','500g'),
-        ('750g','750g'),
+        ('750g','750g'),     
         ('1kg','1kg'),
         ('2kg','2kg')
     )
-    product=models.ForeignKey('Product', on_delete=models.CASCADE,related_name='variants')
+    product=models.ForeignKey(Product, on_delete=models.CASCADE,related_name='variants')
     price=models.DecimalField(max_digits=10,decimal_places=2)
     stock=models.PositiveIntegerField(default=0,validators=[MinValueValidator(0)])
     size=models.CharField(max_length=10,choices=SIZE_CHOICES,default='500g')
@@ -193,10 +198,7 @@ class CartItem(models.Model):
 
     @property
     def total_price(self):
-        """
-        Total using the discounted price that was active when the item was added.
-        Falls back to original price if no discount was stored.
-        """
+ 
         price = self.discounted_price_at_add or self.unit_price_at_add
         return self.quantity * (price or Decimal('0.00'))
     @total_price.setter
@@ -292,22 +294,15 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updates_at=models.DateTimeField(auto_now=True)
     order_id = models.CharField(max_length=20, unique=True, editable=False, blank=True)
-
     return_reason = models.TextField(blank=True, null=True)
     return_requested_at = models.DateTimeField(null=True, blank=True)
     return_approved_at = models.DateTimeField(null=True, blank=True)
     return_rejected_at = models.DateTimeField(null=True, blank=True)
     return_rejection_reason = models.TextField(blank=True, null=True)
-
-
     delivered_at = models.DateTimeField(null=True, blank=True)
-
-
-    #coupon
     coupon = models.ForeignKey('Coupon', on_delete=models.SET_NULL, null=True, blank=True,related_name='orders')
     coupon_code = models.CharField(max_length=20, blank=True)
     coupon_discount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-
     wallet_amount_used = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     amount_paid_online = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     refund_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, help_text="Amount refunded to wallet")
@@ -317,7 +312,20 @@ class Order(models.Model):
         ('completed', 'Refund Completed'),
         ('failed', 'Refund Failed'),
     ])
-
+    # 
+    cancellation_requested_at = models.DateTimeField(null=True, blank=True)
+    cancellation_reason = models.TextField(blank=True, null=True)
+    cancellation_status = models.CharField(
+        max_length=20,
+        default='none',
+        choices=[
+            ('none', 'No Request'),
+            ('requested', 'Cancellation Requested'),
+            ('approved', 'Cancellation Approved'),
+            ('rejected', 'Cancellation Rejected'),
+        ]
+    )
+    cancellation_rejected_reason = models.TextField(blank=True, null=True)
     
 
     def __str__(self):
@@ -325,7 +333,6 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         # 1. Existing Order ID logic
         if not self.order_id:
-            # ... your existing ORD generation logic ...
             pass
 
         # 2. FIX: Auto-set delivered_at when status becomes 'delivered'
@@ -363,24 +370,34 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    variant = models.ForeignKey('ProductVariant', on_delete=models.PROTECT)
+    variant = models.ForeignKey('ProductVariant', on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)  # price at time of order
     total = models.DecimalField(max_digits=10, decimal_places=2)
     cancel_reason = models.TextField(blank=True, null=True)  # Per-item cancel reason
     is_returned = models.BooleanField(default=False)
     return_requested = models.BooleanField(default=False)
-
     return_requested = models.BooleanField(default=False)
     return_requested_at = models.DateTimeField(null=True, blank=True)
     return_reason = models.TextField(blank=True, null=True)
-
-    # NEW: Cancel individual item
     is_cancelled = models.BooleanField(default=False)
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancel_reason = models.TextField(blank=True, null=True)
+    cancellation_requested = models.BooleanField(default=False)
+    cancellation_requested_at = models.DateTimeField(null=True, blank=True)
+    cancellation_reason = models.TextField(blank=True, null=True)
+    cancellation_status = models.CharField(
+        max_length=20,
+        default='none',
+        choices=[
+            ('none', 'No Request'),
+            ('requested', 'Requested'),
+            ('approved', 'Approved'),
+            ('rejected', 'Rejected'),
+        ]
+    )
+    cancellation_rejected_reason = models.TextField(blank=True, null=True)
 
-    # Helper methods
     def can_cancel(self):
         if self.is_cancelled:
             return False
@@ -504,7 +521,7 @@ class Wallet(models.Model):
     @transaction.atomic
     def credit(self, amount: Decimal | int | float, description: str, order=None):
         amount = Decimal(amount)
-        if amount <= 0:
+        if amount <= -1:
             raise ValueError("Credit amount must be positive")
 
         # Lock row + atomic update
@@ -635,3 +652,27 @@ class CategoryOffer(BaseOffer):
         unique_together = ['category']  # one active offer per category
 
 
+class ReferralCode(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referral_code')
+    code = models.CharField(max_length=20, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = get_random_string(length=8, allowed_chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.code}"
+
+class ReferralUsage(models.Model):
+    referrer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referrals_made')
+    referred_user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='referred_by')
+    used_at = models.DateTimeField(auto_now_add=True)
+    order = models.ForeignKey('Order', on_delete=models.SET_NULL, null=True, blank=True)  # Link to first order if you want reward on purchase
+
+    class Meta:
+        unique_together = ('referrer', 'referred_user')
+
+    def __str__(self):
+        return f"{self.referrer} referred {self.referred_user}"

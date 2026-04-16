@@ -192,20 +192,6 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
 
-
-
-# SOCIAL_AUTH_PIPELINE = (
-#     'social_core.pipeline.social_auth.social_details',
-#     'social_core.pipeline.social_auth.social_uid',
-#     'social_core.pipeline.social_auth.auth_allowed',
-#     'social_core.pipeline.social_auth.social_user',
-#     'social_core.pipeline.user.get_username',
-#     'social_core.pipeline.user.create_user',  # creates user if not exists
-#     'social_core.pipeline.social_auth.associate_user',
-#     'social_core.pipeline.social_auth.load_extra_data',
-#     'social_core.pipeline.user.user_details',
-# )
-
 # Ensure session cookies work in localhost
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
@@ -220,13 +206,16 @@ CSRF_COOKIE_SAMESITE = None
 
 
 
-RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
-RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
-
-from decouple import config
+# RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+# RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+import os
+from decouple import config   # pip install python-decouple
 
 RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET')
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY="same-origin-allow-popups"
+
 client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 
