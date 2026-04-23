@@ -1,8 +1,8 @@
 ** project Name
-MR CAKE
+-MR CAKE
 
 ** Description
-This project is an e-commerce web application built using django and postgre sql
+-This project is an e-commerce web application built using django and postgre sql
 
 ** Features
 - User authentication (login/signup)
