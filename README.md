@@ -17,17 +17,15 @@
 - HTML, CSS
 
 ** Installation
-1. Clone the repository:
-   git clone https://github.com/your-username/project-name.git
-2. Go to project folder:
+1. Go to project folder:
    cd project-name
-3. Create virtual environment:
+2. Create virtual environment:
    python -m venv env
-4. Activate environment:
+3. Activate environment:
    env\Scripts\activate   (Windows)
-5. Install dependencies:
+4. Install dependencies:
    pip install -r requirements.txt
-6. Run server:
+5. Run server:
    python manage.py runserver
 
 ** Usage
